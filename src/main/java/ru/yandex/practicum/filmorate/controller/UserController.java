@@ -25,7 +25,7 @@ public class UserController {
 
     @PostMapping
     public User create(@RequestBody User user) {
-        validate(user);
+        validateUser(user);
         user.setId(getNextId());
         users.put(user.getId(), user);
         log.info("Создан пользователь: {}", user);
@@ -58,7 +58,7 @@ public class UserController {
             oldUser.setBirthday(newUser.getBirthday());
         }
 
-        validate(oldUser);
+        validateUser(oldUser);
         log.info("Обновлены данные о пользователе c id {}: {}", newUser.getId(), oldUser.getName());
         return oldUser;
     }
@@ -72,7 +72,7 @@ public class UserController {
         return ++currentMaxId;
     }
 
-    private void validate(User user) {
+    public void validateUser(User user) {
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             if (user.getEmail() == null) {
                 log.warn("Ошибка валидации: имейл не может быть null");

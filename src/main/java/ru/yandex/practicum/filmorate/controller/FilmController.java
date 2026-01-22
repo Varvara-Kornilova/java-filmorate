@@ -75,7 +75,7 @@ public class FilmController {
         return ++currentMaxId;
     }
 
-    private static void validateFilm(Film film) {
+    public void validateFilm(Film film) {
         if (film.getName() == null || film.getName().isBlank()) {
             log.warn("Ошибка валидации: название пустое или null");
             throw new ValidationException("название не может быть пустым");
