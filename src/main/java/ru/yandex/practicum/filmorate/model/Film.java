@@ -1,6 +1,8 @@
 package ru.yandex.practicum.filmorate.model;
 
+import jakarta.validation.constraints.*;
 import lombok.Data;
+import ru.yandex.practicum.filmorate.validator.ValidReleaseDate;
 
 import java.time.LocalDate;
 
@@ -10,18 +12,23 @@ import java.time.LocalDate;
 @Data
 public class Film {
 
-/** Целочисленный идентификатор. */
+    /** Целочисленный идентификатор. */
     private Long id;
 
-/** Название. */
+    /** Название. */
+    @NotBlank(message = "Название фильма не может быть пустым")
     private String name;
 
-/** Описание. */
+    /** Описание. */
+    @Size(max = 200, message = "Максимальная длина описания — 200 символов")
     private String description;
 
-/** Дата релиза. */
+    /** Дата релиза. */
+    @ValidReleaseDate
+    @PastOrPresent(message = "Дата релиза не может быть в будущем")
     private LocalDate releaseDate;
 
-/** Продолжительность фильма. */
+    /** Продолжительность фильма. */
+    @Positive(message = "Продолжительность фильма должна быть положительным числом")
     private Integer duration;
 }
