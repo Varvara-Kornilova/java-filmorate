@@ -1,40 +1,46 @@
-package ru.yandex.practicum.filmorate.controller;
+package ru.yandex.practicum.filmorate.storage.user;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.model.User;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class UserControllerTests {
+class InMemoryStorageUserTests {
 
-    public UserController controller = new UserController();
+    private InMemoryUserStorage storage;
+
+    @BeforeEach
+    void setUp() {
+        storage = new InMemoryUserStorage();
+    }
 
     @Test
-    public void shouldSetNameToLoginWhenNameIsNull() {
+    void shouldSetNameToLoginWhenNameIsNull() {
         User user = new User();
         user.setLogin("testlogin");
         user.setName(null);
-        controller.useLoginAsNameIfNameIsNotValid(user);
+        storage.useLoginAsNameIfNameIsNotValid(user);
 
         assertEquals("testlogin", user.getName());
     }
 
     @Test
-    public void shouldSetNameToLoginWhenNameIsEmpty() {
+    void shouldSetNameToLoginWhenNameIsEmpty() {
         User user = new User();
         user.setLogin("testlogin");
         user.setName("");
-        controller.useLoginAsNameIfNameIsNotValid(user);
+        storage.useLoginAsNameIfNameIsNotValid(user);
 
         assertEquals("testlogin", user.getName());
     }
 
     @Test
-    public void shouldNotChangeNameWhenItIsValid() {
+    void shouldNotChangeNameWhenItIsValid() {
         User user = new User();
         user.setLogin("testlogin");
         user.setName("Real Name");
-        controller.useLoginAsNameIfNameIsNotValid(user);
+        storage.useLoginAsNameIfNameIsNotValid(user);
 
         assertEquals("Real Name", user.getName());
     }
