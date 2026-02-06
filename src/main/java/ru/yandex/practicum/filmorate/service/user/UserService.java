@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.service.user;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.DuplicateDataException;
@@ -14,14 +15,10 @@ import java.util.Set;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final UserStorage userStorage;
     private final EntityValidator validator;
-
-    public UserService(UserStorage userStorage, EntityValidator validator) {
-        this.userStorage = userStorage;
-        this.validator = validator;
-    }
 
     public User addFriend(Long userId, Long friendId) {
         log.debug("Добавление дружбы: пользователь {} добавляет {}", userId, friendId);
@@ -70,7 +67,7 @@ public class UserService {
     }
 
     public List<User> getFriends(Long userId) {
-        log.trace("Запрос на получение друзей пользователя {}", userId);
+        log.debug("Запрос на получение друзей пользователя {}", userId);
 
         User user = validator.getUserOrThrow(userId);
 
@@ -85,7 +82,7 @@ public class UserService {
     }
 
     public List<User> getCommonFriends(Long userId, Long otherUserId) {
-        log.trace("Запрос на получение общих друзей: {} и {}", userId, otherUserId);
+        log.debug("Запрос на получение общих друзей: {} и {}", userId, otherUserId);
 
         User user = validator.getUserOrThrow(userId);
         User otherUser = validator.getUserOrThrow(otherUserId);

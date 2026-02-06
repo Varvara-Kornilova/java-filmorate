@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.validator;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -9,14 +10,10 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 @Component
+@RequiredArgsConstructor
 public class EntityValidator {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-
-    public EntityValidator(FilmStorage filmStorage, UserStorage userStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-    }
 
     public Film getFilmOrThrow(Long filmId) {
         if (filmId == null || filmId <= 0) {

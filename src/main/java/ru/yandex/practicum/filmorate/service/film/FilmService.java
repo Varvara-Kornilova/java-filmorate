@@ -7,7 +7,6 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.validator.EntityValidator;
 import java.util.Comparator;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -15,7 +14,7 @@ import java.util.stream.Collectors;
 public class FilmService {
     private final FilmStorage filmStorage;
     private final EntityValidator validator;
-    Map<Long, Set<Long>> likes = new ConcurrentHashMap<>();
+    private final Map<Long, Set<Long>> likes = new HashMap<>();
 
     public FilmService(FilmStorage filmStorage, EntityValidator validator) {
         this.filmStorage = filmStorage;
@@ -44,21 +43,25 @@ public class FilmService {
         Film film = validateAndGetFilm(filmId, userId);
 
         Set<Long> filmLikes = likes.get(filmId);
-        if (filmLikes != null) {
-            boolean wasRemoved = filmLikes.remove(userId);
 
-            film.getLikes().remove(userId);
+        if (filmLikes == null) {
+            log.warn("Попытка удалить лайк у фильма {}, у которого нет лайков", filmId);
+            return film;
+        }
 
-            if (wasRemoved) {
-                log.info("Лайк удалён: фильм {} потерял лайк от пользователя {}", filmId, userId);
+        boolean wasRemoved = filmLikes.remove(userId);
 
-                if (filmLikes.isEmpty()) {
-                    likes.remove(filmId);
-                    log.debug("Список лайков фильма {} очищен", filmId);
-                }
-            } else {
-                log.warn("Попытка удалить несуществующий лайк: фильм {} от пользователя {}", filmId, userId);
-            }
+        if (!wasRemoved) {
+            log.warn("Попытка удалить несуществующий лайк: фильм {} от пользователя {}", filmId, userId);
+            return film;
+        }
+
+        film.getLikes().remove(userId);
+        log.info("Лайк удалён: фильм {} потерял лайк от пользователя {}", filmId, userId);
+
+        if (filmLikes.isEmpty()) {
+            likes.remove(filmId);
+            log.debug("Список лайков фильма {} очищен", filmId);
         }
 
         return film;

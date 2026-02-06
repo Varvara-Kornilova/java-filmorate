@@ -1,32 +1,27 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.Collection;
 import java.util.List;
 
 @Slf4j
 @RestController
 @RequestMapping("/films")
+@RequiredArgsConstructor
 public class FilmController {
-
     public final FilmStorage filmStorage;
     public final FilmService filmService;
 
-    public FilmController(FilmStorage filmStorage, FilmService filmService) {
-        this.filmStorage = filmStorage;
-        this.filmService = filmService;
-    }
-
     @GetMapping
-    public Collection<Film> findAllFilms() {
+    public List<Film> findAllFilms() {
         log.debug("Запрос на получение всех фильмов");
-        Collection<Film> films = filmStorage.findAllFilms();
+        List<Film> films = filmStorage.findAllFilms();
         log.debug("Найдено {} фильмов", films.size());
         return films;
     }
