@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.exception;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import ru.yandex.practicum.filmorate.controller.Violation;
 
 import java.util.List;
 
