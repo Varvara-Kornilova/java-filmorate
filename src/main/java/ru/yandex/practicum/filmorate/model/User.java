@@ -4,7 +4,9 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -35,4 +37,7 @@ public class User {
 
     /** Список друзей пользователя (множество уникальных ID). */
     private Set<Long> friends = new HashSet<>();
+
+    /** Статус дружбы. */
+    private Map<Long, FriendshipStatus> friendship = new HashMap<>();
 }
