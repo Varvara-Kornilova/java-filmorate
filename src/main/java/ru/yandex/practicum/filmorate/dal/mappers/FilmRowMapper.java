@@ -19,13 +19,15 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         Long mpaId = rs.getObject("mpa_rating_id", Long.class);
         if (mpaId != null) {
-            Mpa mpa = new Mpa(
-                    mpaId,
-                    rs.getString("mpa_code"),
-                    rs.getString("mpa_description")
-            );
-            film.setMpa(mpa);
+            String mpaCode = rs.getString("mpa_code");
+            String mpaDescription = rs.getString("mpa_description");
+
+            if (mpaCode != null) {
+                film.setMpa(new Mpa(mpaId, mpaCode, mpaDescription));
+                film.setMpaRatingId(mpaId);
+            }
         }
+
         return film;
     }
 }

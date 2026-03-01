@@ -6,11 +6,10 @@ import ru.yandex.practicum.filmorate.validator.ValidReleaseDate;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Film.
- */
 @Data
 public class Film {
 
@@ -37,9 +36,32 @@ public class Film {
     /** Лайки у фильма. */
     private Set<Long> likes = new HashSet<>();
 
-    /** Возрастной рейтинг фильма. */
+    /** Жанры фильма (список ID) — для входящих запросов. */
+    private Set<Long> genreIds = new HashSet<>();
+
+    /** ID возрастного рейтинга — для входящих запросов. */
+    private Long mpaRatingId;
+
+    /** Объект рейтинга — для исходящих ответов. */
     private Mpa mpa;
 
-    /** Жанры, к которым фильм относится. */
+    /** Жанры как объекты — для исходящих ответов. */
     private Set<Genre> genres = new HashSet<>();
+
+    public void setMpa(Mpa mpa) {
+        this.mpa = mpa;
+        if (mpa != null && mpa.getId() != null) {
+            this.mpaRatingId = mpa.getId();
+        }
+    }
+
+    public void setGenres(Set<Genre> genres) {
+        this.genres = genres;
+        if (genres != null && !genres.isEmpty()) {
+            this.genreIds = genres.stream()
+                    .map(Genre::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        }
+    }
 }

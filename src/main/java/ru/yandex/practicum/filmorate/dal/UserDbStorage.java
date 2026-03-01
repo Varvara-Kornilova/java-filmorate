@@ -1,67 +1,63 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 
 @Component("userDbStorage")
-public class UserDbStorage implements UserStorage {
+public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    public UserDbStorage(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public UserDbStorage(JdbcTemplate jdbc) {
+        super(jdbc, new UserRowMapper());
     }
 
     @Override
     public List<User> findAllUsers() {
-        String sql = "SELECT user_id, email, login, name, birthday FROM users";
-        return jdbcTemplate.query(sql, new UserRowMapper());
+        return getAll("SELECT user_id, email, login, name, birthday FROM users");
     }
 
     @Override
     public User create(User user) {
-        String sql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
+        String query = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
 
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"user_id"});
-            ps.setString(1, user.getEmail());
-            ps.setString(2, user.getLogin());
-            ps.setString(3, user.getName());
-            ps.setObject(4, user.getBirthday());
-            return ps;
-        }, keyHolder);
+        Long id = insert(query,
+                user.getEmail(),
+                user.getLogin(),
+                user.getName(),
+                user.getBirthday()
+        );
 
-        user.setId(keyHolder.getKey().longValue());
+        user.setId(id);
         return user;
     }
 
     @Override
     public User update(User newUser) {
-        String sql = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
-        jdbcTemplate.update(sql,
+        Optional<User> existing = findUserById(newUser.getId());
+        if (existing.isEmpty()) {
+            throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+        }
+
+        String query = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
+        jdbc.update(query,
                 newUser.getEmail(),
                 newUser.getLogin(),
                 newUser.getName(),
                 newUser.getBirthday(),
-                newUser.getId());
+                newUser.getId()
+        );
+
         return newUser;
     }
 
     @Override
     public Optional<User> findUserById(Long id) {
-        String sql = "SELECT user_id, email, login, name, birthday FROM users WHERE user_id = ?";
-        List<User> users = jdbcTemplate.query(sql, new UserRowMapper(), id);
-        return users.isEmpty() ? Optional.empty() : Optional.of(users.getFirst());
+        return get("SELECT user_id, email, login, name, birthday FROM users WHERE user_id = ?", id);
     }
 }
