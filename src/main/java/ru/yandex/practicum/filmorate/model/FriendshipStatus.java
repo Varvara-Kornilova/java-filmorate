@@ -1,15 +1,12 @@
 package ru.yandex.practicum.filmorate.model;
 
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-@Getter
-public enum FriendshipStatus {
-    UNCONFIRMED("неподтверждённая"),
-    CONFIRMED("подтверждённая");
-
-    private final String description;
-
-    FriendshipStatus(String description) {
-        this.description = description;
-    }
+@Data
+@AllArgsConstructor
+public class FriendshipStatus {
+    private final Long id;
+    private final String status;
 }
+

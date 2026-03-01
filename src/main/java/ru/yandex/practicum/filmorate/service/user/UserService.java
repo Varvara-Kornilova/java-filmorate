@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service.user;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.DuplicateDataException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -15,10 +16,16 @@ import java.util.Set;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class UserService {
+
     private final UserStorage userStorage;
     private final EntityValidator validator;
+
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage,
+                       EntityValidator validator) {
+        this.userStorage = userStorage;
+        this.validator = validator;
+    }
 
     public User addFriend(Long userId, Long friendId) {
         log.debug("Добавление дружбы: пользователь {} добавляет {}", userId, friendId);
