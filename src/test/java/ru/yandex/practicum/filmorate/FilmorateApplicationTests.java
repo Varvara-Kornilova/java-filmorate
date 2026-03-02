@@ -32,7 +32,7 @@ class FilmorateApplicationTests {
 
         User created = userStorage.create(user);
 
-        Optional<User> userOptional = userStorage.findUserById(created.getId());
+        Optional<User> userOptional = userStorage.findById(created.getId());
 
         assertThat(userOptional)
                 .isPresent()

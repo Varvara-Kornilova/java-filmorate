@@ -1,22 +1,18 @@
 package ru.yandex.practicum.filmorate.storage.friendship;
 
 import ru.yandex.practicum.filmorate.model.User;
-import java.util.List;
-import java.util.Optional;
+import java.util.Collection;
 
 public interface FriendshipStorage {
-    /** Добавить заявку в друзья (односторонняя) */
-    void addFriendship(Long userId, Long friendId, String statusName);
+    // Добавление друга (подписка)
+    void addFriend(Long userId, Long friendId);
 
-    /** Удалить заявку в друзья */
-    void removeFriendship(Long userId, Long friendId);
+    // Удаление друга
+    void removeFriend(Long userId, Long friendId);
 
-    /** Получить список друзей пользователя */
-    List<User> getFriends(Long userId);
+    // Список друзей
+    Collection<User> getFriends(Long userId);
 
-    /** Получить список общих друзей */
-    List<User> getCommonFriends(Long userId, Long otherUserId);
-
-    /** Проверить, существует ли связь */
-    boolean exists(Long userId, Long friendId);
+    // Общие друзья
+    Collection<User> getCommonFriends(Long userId, Long otherUserId);
 }

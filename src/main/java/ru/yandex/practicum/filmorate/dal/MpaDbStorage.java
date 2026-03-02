@@ -1,31 +1,34 @@
 package ru.yandex.practicum.filmorate.dal;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.dal.mappers.MpaRowMapper;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
-@Component("mpaDbStorage")
+/**
+ * Хранилище для работы с возрастными рейтингами (MPA).
+ */
+@Repository
 public class MpaDbStorage extends BaseDbStorage<Mpa> implements MpaStorage {
 
-    public MpaDbStorage(JdbcTemplate jdbc) {
-        super(jdbc, (rs, rowNum) -> new Mpa(
-                rs.getLong("rating_id"),
-                rs.getString("code"),
-                rs.getString("description")
-        ));
+    private static final String FIND_ALL = "SELECT rating_id, name, description FROM mpa_rating ORDER BY rating_id";
+    private static final String FIND_BY_ID = "SELECT rating_id, name, description FROM mpa_rating WHERE rating_id = ?";
+
+    public MpaDbStorage(JdbcTemplate jdbcTemplate, MpaRowMapper mpaRowMapper) {
+        super(jdbcTemplate, mpaRowMapper);
     }
 
     @Override
-    public List<Mpa> findAll() {
-        return getAll("SELECT rating_id, code, description FROM mpa_rating ORDER BY rating_id");
+    public Collection<Mpa> findAll() {
+        return queryForList(FIND_ALL);
     }
 
     @Override
     public Optional<Mpa> findById(Long id) {
-        return get("SELECT rating_id, code, description FROM mpa_rating WHERE rating_id = ?", id);
+        return findOptional(FIND_BY_ID, id);
     }
 }

@@ -1,70 +1,80 @@
 package ru.yandex.practicum.filmorate.dal;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 
-import java.util.List;
+import java.util.*;
 
-@Component
+/**
+ * Хранилище для управления дружбой между пользователями.
+ * Поддерживает односторонние связи (подписки).
+ */
+@Repository
 public class FriendshipDbStorage extends BaseDbStorage<User> implements FriendshipStorage {
 
-    public FriendshipDbStorage(JdbcTemplate jdbc) {
-        super(jdbc, new UserRowMapper());
-    }
-
-    @Override
-    public void addFriendship(Long userId, Long friendId, String statusName) {
-        Long statusId = jdbc.queryForObject(
-                "SELECT status_id FROM friendship_status WHERE name = ?",
-                Long.class, statusName);
-
-        if (statusId == null) {
-            throw new RuntimeException("Статус дружбы не найден: " + statusName);
-        }
-
-        String sql = """
-            MERGE INTO friendship (user_id, friend_id, status_id) 
-            KEY (user_id, friend_id) 
-            VALUES (?, ?, ?)
+    private static final String ADD_FRIEND = """
+            INSERT INTO friendship (user_id, friend_id, status_id) 
+            VALUES (?, ?, 2)
+            ON CONFLICT (user_id, friend_id) DO NOTHING
             """;
-        jdbc.update(sql, userId, friendId, statusId);
-    }
-
-    @Override
-    public void removeFriendship(Long userId, Long friendId) {
-        delete("DELETE FROM friendship WHERE user_id = ? AND friend_id = ?", userId, friendId);
-    }
-
-    @Override
-    public List<User> getFriends(Long userId) {
-        String sql = """
-            SELECT u.user_id, u.email, u.login, u.name, u.birthday
-            FROM friendship f
-            JOIN users u ON f.friend_id = u.user_id
-            WHERE f.user_id = ?
-            """;
-        return getAll(sql, userId);
-    }
-
-    @Override
-    public List<User> getCommonFriends(Long userId, Long otherUserId) {
-        String sql = """
-            SELECT u.user_id, u.email, u.login, u.name, u.birthday
-            FROM friendship f1
-            JOIN friendship f2 ON f1.friend_id = f2.friend_id
-            JOIN users u ON f1.friend_id = u.user_id
+    private static final String REMOVE_FRIEND = "DELETE FROM friendship WHERE user_id = ? AND friend_id = ?";
+    private static final String GET_FRIENDS_IDS = "SELECT friend_id FROM friendship WHERE user_id = ?";
+    private static final String GET_COMMON_FRIENDS_IDS = """
+            SELECT f1.friend_id 
+            FROM friendship f1 
+            JOIN friendship f2 ON f1.friend_id = f2.friend_id 
             WHERE f1.user_id = ? AND f2.user_id = ?
             """;
-        return getAll(sql, userId, otherUserId);
+    private static final String GET_USERS_BY_IDS = "SELECT * FROM users WHERE user_id IN (:ids)";
+    private static final String CHECK_FRIENDSHIP = """
+            SELECT EXISTS(SELECT 1 FROM friendship WHERE user_id = ? AND friend_id = ?)
+            """;
+
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public FriendshipDbStorage(JdbcTemplate jdbcTemplate, UserRowMapper userRowMapper) {
+        super(jdbcTemplate, userRowMapper);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
     }
 
     @Override
+    public void addFriend(Long userId, Long friendId) {
+        executeUpdate(ADD_FRIEND, userId, friendId);
+    }
+
+    @Override
+    public void removeFriend(Long userId, Long friendId) {
+        executeUpdate(REMOVE_FRIEND, userId, friendId);
+    }
+
+    @Override
+    public Collection<User> getFriends(Long userId) {
+        List<Long> friendIds = jdbcTemplate.queryForList(GET_FRIENDS_IDS, Long.class, userId);
+        if (friendIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return getUsersByIds(friendIds);
+    }
+
+    @Override
+    public Collection<User> getCommonFriends(Long userId, Long otherUserId) {
+        List<Long> commonIds = jdbcTemplate.queryForList(GET_COMMON_FRIENDS_IDS, Long.class, userId, otherUserId);
+        if (commonIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return getUsersByIds(commonIds);
+    }
+
     public boolean exists(Long userId, Long friendId) {
-        String sql = "SELECT COUNT(*) FROM friendship WHERE user_id = ? AND friend_id = ?";
-        Integer count = jdbc.queryForObject(sql, Integer.class, userId, friendId);
-        return count != null && count > 0;
+        return exists(CHECK_FRIENDSHIP, userId);
+    }
+
+    private Collection<User> getUsersByIds(List<Long> ids) {
+        Map<String, Object> params = Collections.singletonMap("ids", ids);
+        return namedParameterJdbcTemplate.query(GET_USERS_BY_IDS, params, rowMapper);
     }
 }

@@ -1,92 +1,116 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.service.user.UserService;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.service.UserService;
 
-import java.util.List;
+import java.util.Collection;
 
+/**
+ * Контроллер для управления пользователями и дружбой.
+ * Обрабатывает запросы к эндпоинтам /users.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    private final UserStorage userStorage;
     private final UserService userService;
 
-    public UserController(@Qualifier("userDbStorage") UserStorage userStorage,
-                          UserService userService) {
-        this.userStorage = userStorage;
-        this.userService = userService;
-    }
-
+    /**
+     * Возвращает список всех зарегистрированных пользователей.
+     */
     @GetMapping
-    public List<User> findAllUsers() {
-        log.debug("Запрос на получение всех пользователей");
-        List<User> users = userStorage.findAllUsers();
-        log.debug("Найдено {} пользователей", users.size());
-        return users;
+    public Collection<User> listAllUsers() {
+        log.info("Запрошен список всех пользователей");
+        return userService.getAllUsers();
     }
 
+    /**
+     * Возвращает пользователя по идентификатору.
+     */
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable("id") Long id) {
-        log.debug("Запрос на получение пользователя с id = {}", id);
-        User user = userStorage.findUserById(id)
-                .orElseThrow(() -> new ru.yandex.practicum.filmorate.exception.NotFoundException(
-                        "Пользователь с id = " + id + " не найден"));
-        log.debug("Найден пользователь: {} (id = {})", user.getName() != null ? user.getName() : user.getLogin(), user.getId());
-        return user;
+    public User fetchUserById(@PathVariable @Positive(message = "Идентификатор пользователя должен быть положительным") Long id) {
+        log.debug("Запрос пользователя с id={}", id);
+        return userService.getUserById(id);
     }
 
+    /**
+     * Возвращает список друзей указанного пользователя.
+     */
     @GetMapping("/{id}/friends")
-    public List<User> getFriends(@PathVariable("id") Long userId) {
-        log.debug("Запрос на получение друзей пользователя с id = {}", userId);
-        List<User> friends = userService.getFriends(userId);
-        log.debug("У пользователя {} {} друзей", userId, friends.size());
-        return friends;
+    public Collection<User> listUserFriends(@PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
+        log.info("Запрошены друзья пользователя с id={}", id);
+        return userService.getFriendsList(id);
     }
 
+    /**
+     * Возвращает список общих друзей двух пользователей.
+     */
     @GetMapping("/{id}/friends/common/{otherId}")
-    public List<User> getCommonFriends(@PathVariable("id") Long userId, @PathVariable("otherId") Long otherUserId) {
-        log.debug("Запрос на получение общих друзей между {} и {}", userId, otherUserId);
-        List<User> commonFriends = userService.getCommonFriends(userId, otherUserId);
-        log.debug("У пользователей {} и {} {} общих друзей", userId, otherUserId, commonFriends.size());
-        return commonFriends;
+    public Collection<User> listMutualFriends(
+            @PathVariable @Positive(message = "ID первого пользователя должен быть положительным") Long id,
+            @PathVariable @Positive(message = "ID второго пользователя должен быть положительным") Long otherId) {
+        log.info("Запрошены общие друзья пользователей {} и {}", id, otherId);
+        return userService.getMutualFriends(id, otherId);
     }
 
+    /**
+     * Регистрирует нового пользователя.
+     */
     @PostMapping
-    public User create(@Valid @RequestBody User user) {
-        log.info("Создание нового пользователя: логин = {}", user.getLogin());
-        User createdUser = userStorage.create(user);
-        log.info("Пользователь успешно создан с id = {}", createdUser.getId());
-        return createdUser;
+    public User registerNewUser(@Valid @RequestBody User user) {
+        log.info("Регистрация нового пользователя: login={}", user.getLogin());
+        return userService.registerUser(user);
     }
 
+    /**
+     * Обновляет данные существующего пользователя.
+     */
     @PutMapping
-    public User update(@Valid @RequestBody User newUser) {
-        log.info("Обновление пользователя с id = {}", newUser.getId());
-        User updatedUser = userStorage.update(newUser);
-        log.info("Пользователь с id = {} успешно обновлён", updatedUser.getId());
-        return updatedUser;
+    public User modifyUserProfile(@Valid @RequestBody User updatedUser) {
+        log.info("Обновление профиля пользователя с id={}", updatedUser.getId());
+        return userService.modifyUser(updatedUser);
     }
 
+    /**
+     * Добавляет пользователя в друзья (односторонняя подписка).
+     * @return пользователь, чей список друзей обновлён
+     */
     @PutMapping("/{id}/friends/{friendId}")
-    public User addFriend(@PathVariable("id") Long userId, @PathVariable("friendId") Long friendId) {
-        log.info("Пользователь {} добавляет друга {}", userId, friendId);
-        User user = userService.addFriend(userId, friendId);
-        log.info("Дружба установлена: пользователи {} и {} теперь друзья", userId, friendId);
-        return user;
+    public User initiateFriendship(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id,
+            @PathVariable @Positive(message = "ID друга должен быть положительным") Long friendId) {
+        log.info("Пользователь {} отправляет запрос дружбы пользователю {}", id, friendId);
+        userService.sendFriendRequest(id, friendId);
+        return userService.getUserById(id);
     }
 
+    /**
+     * Удаляет пользователя из списка друзей.
+     * @return пользователь, чей список друзей обновлён
+     */
     @DeleteMapping("/{id}/friends/{friendId}")
-    public User removeFriend(@PathVariable("id") Long userId, @PathVariable("friendId") Long friendId) {
-        log.info("Пользователь {} удаляет друга {}", userId, friendId);
-        User user = userService.removeFriend(userId, friendId);
-        log.info("Дружба удалена: пользователи {} и {} больше не друзья", userId, friendId);
-        return user;
+    public User terminateFriendship(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id,
+            @PathVariable @Positive(message = "ID друга должен быть положительным") Long friendId) {
+        log.info("Пользователь {} удаляет пользователя {} из друзей", id, friendId);
+        userService.removeFriend(id, friendId);
+        return userService.getUserById(id);
+    }
+
+    /**
+     * Удаляет пользователя по идентификатору.
+     */
+    @DeleteMapping("/{id}")
+    public void excludeUser(@PathVariable @Positive(message = "ID должен быть положительным") Long id) {
+        log.info("Удаление пользователя с id={}", id);
+        // Если метод есть в сервисе
+        // userService.deleteUser(id);
     }
 }

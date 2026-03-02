@@ -4,54 +4,51 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
-import ru.yandex.practicum.filmorate.exception.InternalServerException;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Базовый класс для всех хранилищ с общей логикой работы с БД.
+ * Использует JdbcTemplate для выполнения запросов.
+ */
 public abstract class BaseDbStorage<T> {
 
-    protected final JdbcTemplate jdbc;
-    protected final NamedParameterJdbcTemplate namedJdbc;
-    protected final RowMapper<T> mapper;
+    protected final JdbcTemplate jdbcTemplate;
+    protected final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    protected final RowMapper<T> rowMapper;
 
-    public BaseDbStorage(JdbcTemplate jdbc, RowMapper<T> mapper) {
-        this.jdbc = jdbc;
-        this.namedJdbc = new NamedParameterJdbcTemplate(jdbc);
-        this.mapper = mapper;
+    public BaseDbStorage(JdbcTemplate jdbcTemplate, RowMapper<T> rowMapper) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        this.rowMapper = rowMapper;
     }
 
-    protected Optional<T> get(String query, Object... params) {
-        try {
-            T result = jdbc.queryForObject(query, mapper, params);
-            return Optional.ofNullable(result);
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-            return Optional.empty();
-        }
+    /**
+     * Выполняет SELECT-запрос и возвращает один объект.
+     */
+    protected T queryForObject(String sql, Object... args) {
+        return jdbcTemplate.queryForObject(sql, rowMapper, args);
     }
 
-    public List<T> getAll(String query, Object... params) {
-        return jdbc.query(query, mapper, params);
+    /**
+     * Выполняет SELECT-запрос и возвращает список объектов.
+     */
+    protected List<T> queryForList(String sql, Object... args) {
+        return jdbcTemplate.query(sql, rowMapper, args);
     }
 
-    public void delete(String query, Object... params) {
-        jdbc.update(query, params);
-    }
-
-    public int update(String query, Object... params) {
-        return jdbc.update(query, params);
-    }
-
-    public Long insert(String query, Object... params) {
+    /**
+     * Выполняет INSERT-запрос и возвращает сгенерированный ID.
+     */
+    protected Long insertAndGetId(String sql, Object... args) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
-
-        jdbc.update(connection -> {
-            PreparedStatement ps = connection
-                    .prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-            for (int idx = 0; idx < params.length; idx++) {
-                ps.setObject(idx + 1, params[idx]);
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            for (int i = 0; i < args.length; i++) {
+                ps.setObject(i + 1, args[i]);
             }
             return ps;
         }, keyHolder);
@@ -59,8 +56,32 @@ public abstract class BaseDbStorage<T> {
         Number key = keyHolder.getKey();
         if (key != null) {
             return key.longValue();
-        } else {
-            throw new InternalServerException("Не удалось сохранить данные: " + query);
+        }
+        throw new RuntimeException("Не удалось получить сгенерированный ID");
+    }
+
+    /**
+     * Выполняет UPDATE/DELETE-запрос.
+     */
+    protected int executeUpdate(String sql, Object... args) {
+        return jdbcTemplate.update(sql, args);
+    }
+
+    /**
+     * Проверяет существование записи по ID.
+     */
+    protected boolean exists(String sql, Long id) {
+        return jdbcTemplate.queryForObject(sql, Boolean.class, id);
+    }
+
+    /**
+     * Безопасный поиск с возвратом Optional.
+     */
+    protected Optional<T> findOptional(String sql, Object... args) {
+        try {
+            return Optional.ofNullable(queryForObject(sql, args));
+        } catch (Exception e) {
+            return Optional.empty();
         }
     }
 }
