@@ -21,19 +21,12 @@ public class MpaController {
 
     private final MpaService mpaService;
 
-    /**
-     * Возвращает все доступные возрастные рейтинги.
-     */
     @GetMapping
     public Collection<Mpa> listAllRatings() {
         log.info("Запрошен список всех возрастных рейтингов MPA");
         return mpaService.getAllRatings();
     }
 
-    /**
-     * Находит и возвращает рейтинг по идентификатору.
-     * @param id идентификатор рейтинга
-     */
     @GetMapping("/{id}")
     public Mpa fetchRatingById(@PathVariable @Positive(message = "ID рейтинга должен быть больше нуля") Long id) {
         log.trace("Получение рейтинга MPA с id={}", id);

@@ -9,9 +9,6 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import java.util.Collection;
 import java.util.Optional;
 
-/**
- * Хранилище для работы с пользователями.
- */
 @Repository
 public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
 

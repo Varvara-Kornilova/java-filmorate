@@ -9,9 +9,6 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-/**
- * Валидатор для проверки существования сущностей в базе данных.
- */
 @Component
 public class EntityValidator {
 
@@ -24,9 +21,6 @@ public class EntityValidator {
         this.userStorage = userStorage;
     }
 
-    /**
-     * Проверяет существование фильма и возвращает его, либо выбрасывает исключение.
-     */
     public Film getFilmOrThrow(Long filmId) {
         if (filmId == null || filmId <= 0) {
             throw new ValidationException("ID фильма не может быть пустым или отрицательным");
@@ -37,15 +31,12 @@ public class EntityValidator {
                         String.format("Фильм с идентификатором %d не найден", filmId)));
     }
 
-    /**
-     * Проверяет существование пользователя и возвращает его, либо выбрасывает исключение.
-     */
+
     public User getUserOrThrow(Long userId) {
         if (userId == null || userId <= 0) {
             throw new ValidationException("ID пользователя не может быть пустым или отрицательным");
         }
 
-        // ✅ Исправлено: findById вместо findUserById
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Пользователь с идентификатором %d не найден", userId)));

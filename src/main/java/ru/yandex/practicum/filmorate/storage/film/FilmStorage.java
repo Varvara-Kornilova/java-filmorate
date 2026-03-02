@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface FilmStorage {
+
     Collection<Film> findAll();
 
     Film create(Film film);
@@ -13,13 +14,10 @@ public interface FilmStorage {
 
     Optional<Film> findById(Long id);
 
-    // Удаление фильма (если нужно по тестам)
     Film delete(Long id);
 
-    // Популярные фильмы
     Collection<Film> getPopular(int count);
 
-    // Лайки
     Long addLike(Long filmId, Long userId);
 
     Long removeLike(Long filmId, Long userId);

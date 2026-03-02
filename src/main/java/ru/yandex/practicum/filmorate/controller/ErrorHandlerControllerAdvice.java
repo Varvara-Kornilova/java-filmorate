@@ -68,9 +68,7 @@ public class ErrorHandlerControllerAdvice {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
     public Violation handleError(final Exception e, HttpServletRequest request) {
-        // Не обрабатывать ошибки H2 Console — пусть H2 сам вернёт HTML
         if (request != null && request.getRequestURI().startsWith("/h2-console")) {
-            // Оборачиваем в RuntimeException, чтобы Spring не пытался обработать дальше
             throw new RuntimeException(e);
         }
 

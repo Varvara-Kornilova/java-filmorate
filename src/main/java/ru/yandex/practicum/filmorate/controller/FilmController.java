@@ -22,28 +22,18 @@ public class FilmController {
 
     private final FilmService filmService;
 
-    /**
-     * Возвращает список всех фильмов.
-     */
     @GetMapping
     public Collection<Film> listAllFilms() {
         log.info("Запрошен список всех фильмов");
         return filmService.getAllFilms();
     }
 
-    /**
-     * Возвращает фильм по идентификатору.
-     */
     @GetMapping("/{id}")
     public Film fetchFilmById(@PathVariable @Positive(message = "Идентификатор фильма должен быть положительным") Long id) {
         log.debug("Запрос фильма с id={}", id);
         return filmService.getFilmById(id);
     }
 
-    /**
-     * Возвращает список популярных фильмов, отсортированных по количеству лайков.
-     * @param count максимальное количество фильмов в ответе (по умолчанию 10)
-     */
     @GetMapping("/popular")
     public Collection<Film> fetchPopularFilms(
             @RequestParam(defaultValue = "10") @Positive(message = "Количество должно быть положительным") Integer count) {
@@ -51,28 +41,18 @@ public class FilmController {
         return filmService.getMostPopularFilms(count);
     }
 
-    /**
-     * Создаёт новый фильм.
-     */
     @PostMapping
     public Film registerFilm(@Valid @RequestBody Film film) {
         log.info("Создание нового фильма: \"{}\"", film.getName());
         return filmService.addFilm(film);
     }
 
-    /**
-     * Обновляет существующий фильм.
-     */
     @PutMapping
     public Film modifyFilm(@Valid @RequestBody Film updatedFilm) {
         log.info("Обновление фильма с id={}", updatedFilm.getId());
         return filmService.editFilm(updatedFilm);
     }
 
-    /**
-     * Добавляет лайк к фильму.
-     * @return обновлённый объект фильма
-     */
     @PutMapping("/{id}/like/{userId}")
     public Film applyLike(
             @PathVariable @Positive(message = "ID фильма должен быть положительным") Long id,
@@ -82,10 +62,6 @@ public class FilmController {
         return filmService.getFilmById(id);
     }
 
-    /**
-     * Удаляет лайк из фильма.
-     * @return обновлённый объект фильма
-     */
     @DeleteMapping("/{id}/like/{userId}")
     public Film retractLike(
             @PathVariable @Positive(message = "ID фильма должен быть положительным") Long id,
@@ -95,9 +71,6 @@ public class FilmController {
         return filmService.getFilmById(id);
     }
 
-    /**
-     * Удаляет фильм по идентификатору.
-     */
     @DeleteMapping("/{id}")
     public void excludeFilm(@PathVariable @Positive(message = "ID должен быть положительным") Long id) {
         log.info("Удаление фильма с id={}", id);

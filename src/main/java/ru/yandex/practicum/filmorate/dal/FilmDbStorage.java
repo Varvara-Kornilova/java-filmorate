@@ -11,10 +11,6 @@ import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Хранилище для работы с фильмами.
- * Жанры подгружаются отдельно через GenreStorage.
- */
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
@@ -104,7 +100,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                 film.getId()
         );
 
-        // Обновляем жанры
         genreStorage.updateFilmGenres(film.getId());
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             Set<Long> genreIds = extractGenreIds(film.getGenres());

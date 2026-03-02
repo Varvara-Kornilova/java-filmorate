@@ -8,9 +8,6 @@ import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 
 import java.util.*;
 
-/**
- * Хранилище для работы с жанрами фильмов.
- */
 @Repository
 public class GenreDbStorage extends BaseDbStorage<Genre> implements GenreStorage {
 
@@ -52,7 +49,6 @@ public class GenreDbStorage extends BaseDbStorage<Genre> implements GenreStorage
 
     @Override
     public void updateFilmGenres(Long filmId) {
-        // Удаляем старые связи перед обновлением (вызывается из Service)
         executeUpdate(DELETE_GENRES, filmId);
     }
 

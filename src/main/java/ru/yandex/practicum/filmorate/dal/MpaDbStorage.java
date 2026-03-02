@@ -9,9 +9,6 @@ import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 import java.util.Collection;
 import java.util.Optional;
 
-/**
- * Хранилище для работы с возрастными рейтингами (MPA).
- */
 @Repository
 public class MpaDbStorage extends BaseDbStorage<Mpa> implements MpaStorage {
 

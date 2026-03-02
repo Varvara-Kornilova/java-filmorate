@@ -8,9 +8,7 @@ import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import java.util.Collection;
 import java.util.Set;
 
-/**
- * Сервис для управления жанрами фильмов.
- */
+
 @Service
 public class GenreService {
 
@@ -20,27 +18,16 @@ public class GenreService {
         this.genreStorage = genreStorage;
     }
 
-    /**
-     * Возвращает все доступные жанры.
-     */
     public Collection<Genre> getAllGenres() {
         return genreStorage.findAll();
     }
 
-    /**
-     * Находит жанр по идентификатору.
-     * @throws NotFoundException если жанр не найден
-     */
     public Genre getGenreById(Long id) {
         return genreStorage.findById(id)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Жанр с идентификатором %d не найден в системе", id)));
     }
 
-    /**
-     * Проверяет существование набора жанров.
-     * @throws NotFoundException если хотя бы один жанр не найден
-     */
     public void validateGenres(Set<Long> genreIds) {
         if (genreIds == null || genreIds.isEmpty()) {
             return;

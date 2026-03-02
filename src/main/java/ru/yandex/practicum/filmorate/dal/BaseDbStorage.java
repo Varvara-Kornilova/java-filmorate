@@ -10,10 +10,6 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Базовый класс для всех хранилищ с общей логикой работы с БД.
- * Использует JdbcTemplate для выполнения запросов.
- */
 public abstract class BaseDbStorage<T> {
 
     protected final JdbcTemplate jdbcTemplate;
@@ -26,23 +22,14 @@ public abstract class BaseDbStorage<T> {
         this.rowMapper = rowMapper;
     }
 
-    /**
-     * Выполняет SELECT-запрос и возвращает один объект.
-     */
     protected T queryForObject(String sql, Object... args) {
         return jdbcTemplate.queryForObject(sql, rowMapper, args);
     }
 
-    /**
-     * Выполняет SELECT-запрос и возвращает список объектов.
-     */
     protected List<T> queryForList(String sql, Object... args) {
         return jdbcTemplate.query(sql, rowMapper, args);
     }
 
-    /**
-     * Выполняет INSERT-запрос и возвращает сгенерированный ID.
-     */
     protected Long insertAndGetId(String sql, Object... args) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -60,23 +47,14 @@ public abstract class BaseDbStorage<T> {
         throw new RuntimeException("Не удалось получить сгенерированный ID");
     }
 
-    /**
-     * Выполняет UPDATE/DELETE-запрос.
-     */
     protected int executeUpdate(String sql, Object... args) {
         return jdbcTemplate.update(sql, args);
     }
 
-    /**
-     * Проверяет существование записи по ID.
-     */
     protected boolean exists(String sql, Long id) {
         return jdbcTemplate.queryForObject(sql, Boolean.class, id);
     }
 
-    /**
-     * Безопасный поиск с возвратом Optional.
-     */
     protected Optional<T> findOptional(String sql, Object... args) {
         try {
             return Optional.ofNullable(queryForObject(sql, args));
