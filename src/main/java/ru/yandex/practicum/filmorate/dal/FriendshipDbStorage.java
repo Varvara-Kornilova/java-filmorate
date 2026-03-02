@@ -13,7 +13,7 @@ import java.util.*;
 public class FriendshipDbStorage extends BaseDbStorage<User> implements FriendshipStorage {
 
     private static final String ADD_FRIEND = """
-            INSERT INTO friendship (user_id, friend_id, status_id) 
+            INSERT INTO friendship (user_id, friend_id, status_id)
             VALUES (?, ?, 2)
             """;
 
@@ -21,9 +21,9 @@ public class FriendshipDbStorage extends BaseDbStorage<User> implements Friendsh
     private static final String GET_FRIENDS_IDS = "SELECT friend_id FROM friendship WHERE user_id = ?";
 
     private static final String GET_COMMON_FRIENDS_IDS = """
-            SELECT f1.friend_id 
-            FROM friendship f1 
-            JOIN friendship f2 ON f1.friend_id = f2.friend_id 
+            SELECT f1.friend_id
+            FROM friendship f1
+            JOIN friendship f2 ON f1.friend_id = f2.friend_id
             WHERE f1.user_id = ? AND f2.user_id = ?
             """;
 
