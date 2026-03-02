@@ -16,9 +16,9 @@ public class GenreDbStorage extends BaseDbStorage<Genre> implements GenreStorage
     private static final String INSERT_GENRE = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
     private static final String DELETE_GENRES = "DELETE FROM film_genres WHERE film_id = ?";
     private static final String FIND_GENRES_BY_FILM = """
-            SELECT g.genre_id, g.name 
-            FROM film_genres fg 
-            JOIN genres g ON fg.genre_id = g.genre_id 
+            SELECT g.genre_id, g.name
+            FROM film_genres fg
+            JOIN genres g ON fg.genre_id = g.genre_id
             WHERE fg.film_id = ?
             """;
 

@@ -15,15 +15,15 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
     private static final String FIND_ALL = "SELECT * FROM users ORDER BY user_id";
     private static final String FIND_BY_ID = "SELECT * FROM users WHERE user_id = ?";
     private static final String INSERT = """
-            INSERT INTO users (email, login, name, birthday) 
+            INSERT INTO users (email, login, name, birthday)
             VALUES (?, ?, ?, ?)
             """;
     private static final String UPDATE = """
-            UPDATE users SET 
-            email = ?, 
-            login = ?, 
-            name = ?, 
-            birthday = ? 
+            UPDATE users SET
+            email = ?,
+            login = ?,
+            name = ?,
+            birthday = ?
             WHERE user_id = ?
             """;
     private static final String DELETE = "DELETE FROM users WHERE user_id = ?";
