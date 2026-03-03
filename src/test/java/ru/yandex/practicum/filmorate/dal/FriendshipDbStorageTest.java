@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({FriendshipDbStorage.class, UserDbStorage.class, UserRowMapper.class})
 @Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-class FriendshipDbStorageTest {
+public class FriendshipDbStorageTest {
 
     private final FriendshipDbStorage friendshipStorage;
     private final UserDbStorage userStorage;
@@ -34,7 +34,7 @@ class FriendshipDbStorageTest {
     private User user3;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         jdbcTemplate.update("DELETE FROM friendship");
         jdbcTemplate.update("DELETE FROM users");
 
@@ -44,7 +44,7 @@ class FriendshipDbStorageTest {
     }
 
     @Test
-    void testAddFriend() {
+    public void testAddFriend() {
         friendshipStorage.addFriend(user1.getId(), user2.getId());
 
         Collection<User> friends = friendshipStorage.getFriends(user1.getId());
@@ -52,7 +52,7 @@ class FriendshipDbStorageTest {
     }
 
     @Test
-    void testAddFriendAlreadyExists() {
+    public void testAddFriendAlreadyExists() {
         friendshipStorage.addFriend(user1.getId(), user2.getId());
         friendshipStorage.addFriend(user1.getId(), user2.getId()); // повторный вызов
 
@@ -61,7 +61,7 @@ class FriendshipDbStorageTest {
     }
 
     @Test
-    void testRemoveFriend() {
+    public void testRemoveFriend() {
         friendshipStorage.addFriend(user1.getId(), user2.getId());
         friendshipStorage.removeFriend(user1.getId(), user2.getId());
 
@@ -70,13 +70,13 @@ class FriendshipDbStorageTest {
     }
 
     @Test
-    void testGetFriendsEmpty() {
+    public void testGetFriendsEmpty() {
         Collection<User> friends = friendshipStorage.getFriends(user1.getId());
         assertThat(friends).isEmpty();
     }
 
     @Test
-    void testGetCommonFriends() {
+    public void testGetCommonFriends() {
         friendshipStorage.addFriend(user1.getId(), user3.getId());
         friendshipStorage.addFriend(user2.getId(), user3.getId());
 
@@ -86,7 +86,7 @@ class FriendshipDbStorageTest {
     }
 
     @Test
-    void testGetCommonFriendsEmpty() {
+    public void testGetCommonFriendsEmpty() {
         friendshipStorage.addFriend(user1.getId(), user3.getId());
         // user2 не имеет общих друзей с user1
 

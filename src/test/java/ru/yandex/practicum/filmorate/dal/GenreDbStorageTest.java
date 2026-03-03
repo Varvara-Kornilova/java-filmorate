@@ -33,20 +33,20 @@ import static org.assertj.core.api.Assertions.assertThat;
         FilmRowMapper.class
 })
 @Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-class GenreDbStorageTest {
+public class GenreDbStorageTest {
 
     private final GenreDbStorage genreStorage;
     private final FilmDbStorage filmStorage;
     private final JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void cleanUp() {
+    public void cleanUp() {
         jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM films");
     }
 
     @Test
-    void testFindAll() {
+    public void testFindAll() {
         Collection<Genre> genres = genreStorage.findAll();
 
         assertThat(genres).isNotEmpty();
@@ -56,7 +56,7 @@ class GenreDbStorageTest {
     }
 
     @Test
-    void testFindById() {
+    public void testFindById() {
         Optional<Genre> found = genreStorage.findById(1L);
 
         assertThat(found).isPresent();
@@ -64,7 +64,7 @@ class GenreDbStorageTest {
     }
 
     @Test
-    void testSetAndGetGenresForFilm() {
+    public void testSetAndGetGenresForFilm() {
         Film film = createTestFilm();
         Film created = filmStorage.create(film);
 
@@ -76,7 +76,7 @@ class GenreDbStorageTest {
     }
 
     @Test
-    void testUpdateFilmGenres() {
+    public void testUpdateFilmGenres() {
         Film film = createTestFilm();
         Film created = filmStorage.create(film);
 
@@ -90,7 +90,7 @@ class GenreDbStorageTest {
     }
 
     @Test
-    void testSetGenresEmpty() {
+    public void testSetGenresEmpty() {
         Film film = createTestFilm();
         Film created = filmStorage.create(film);
 

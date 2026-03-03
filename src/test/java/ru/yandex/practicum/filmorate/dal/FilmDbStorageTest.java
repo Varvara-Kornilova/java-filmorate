@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         UserRowMapper.class
 })
 @Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-class FilmDbStorageTest {
+public class FilmDbStorageTest {
 
     private final FilmDbStorage filmStorage;
     private final GenreDbStorage genreStorage;
@@ -45,7 +45,7 @@ class FilmDbStorageTest {
     private final JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void cleanUp() {
+    public void cleanUp() {
         jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM likes");
         jdbcTemplate.update("DELETE FROM films");
@@ -53,7 +53,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testCreateFilmWithoutGenres() {
+    public void testCreateFilmWithoutGenres() {
         Film film = createTestFilm();
 
         Film created = filmStorage.create(film);
@@ -64,7 +64,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testCreateFilmWithGenres() {
+    public void testCreateFilmWithGenres() {
         Film film = createTestFilm();
         film.setGenres(Set.of(new Genre(1L, "Комедия"), new Genre(2L, "Драма")));
 
@@ -76,7 +76,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testFindByIdWithGenres() {
+    public void testFindByIdWithGenres() {
         Film film = createTestFilm();
         film.setGenres(Set.of(new Genre(3L, "Фантастика")));
         Film created = filmStorage.create(film);
@@ -88,13 +88,13 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testFindByIdNotFound() {
+    public void testFindByIdNotFound() {
         Optional<Film> found = filmStorage.findById(999L);
         assertThat(found).isEmpty();
     }
 
     @Test
-    void testUpdateFilmAndGenres() {
+    public void testUpdateFilmAndGenres() {
         Film film = createTestFilm();
         film.setGenres(Set.of(new Genre(1L, "Комедия")));
         Film created = filmStorage.create(film);
@@ -111,7 +111,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testFindAll() {
+    public void testFindAll() {
         filmStorage.create(createTestFilm());
         filmStorage.create(createTestFilm("Film Two", "Desc Two"));
 
@@ -122,7 +122,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testDelete() {
+    public void testDelete() {
         Film film = filmStorage.create(createTestFilm());
 
         filmStorage.delete(film.getId());
@@ -131,7 +131,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testContains() {
+    public void testContains() {
         Film film = filmStorage.create(createTestFilm());
 
         assertThat(filmStorage.contains(film.getId())).isTrue();
@@ -139,7 +139,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testAddAndRemoveLike() {
+    public void testAddAndRemoveLike() {
         Film film = filmStorage.create(createTestFilm());
         User user = createTestUser("liker@test.com", "liker");
 
@@ -163,7 +163,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testGetPopular() {
+    public void testGetPopular() {
         Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One"));
         Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two"));
 
@@ -182,7 +182,7 @@ class FilmDbStorageTest {
     }
 
     @Test
-    void testGetPopularWithLimit() {
+    public void testGetPopularWithLimit() {
         for (int i = 0; i < 5; i++) {
             Film film = createTestFilm("Film " + i, "Desc " + i);
             filmStorage.create(film);

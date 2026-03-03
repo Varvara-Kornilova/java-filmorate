@@ -24,19 +24,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({UserDbStorage.class, UserRowMapper.class})
 @Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-class UserDbStorageTest {
+public class UserDbStorageTest {
 
     private final UserDbStorage userStorage;
     private final JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void cleanUp() {
+    public void cleanUp() {
         jdbcTemplate.update("DELETE FROM friendship");
         jdbcTemplate.update("DELETE FROM users");
     }
 
     @Test
-    void testCreateAndFindById() {
+    public void testCreateAndFindById() {
         User user = new User();
         user.setEmail("test@example.com");
         user.setLogin("testuser");
@@ -57,7 +57,7 @@ class UserDbStorageTest {
     }
 
     @Test
-    void testUpdate() {
+    public void testUpdate() {
         User user = createUser("old@example.com", "oldlogin", "Old Name");
 
         user.setName("Updated Name");
@@ -72,7 +72,7 @@ class UserDbStorageTest {
     }
 
     @Test
-    void testFindAll() {
+    public void testFindAll() {
         createUser("u1@test.com", "user1", "User One");
         createUser("u2@test.com", "user2", "User Two");
 
@@ -83,7 +83,7 @@ class UserDbStorageTest {
     }
 
     @Test
-    void testDelete() {
+    public void testDelete() {
         User created = createUser("todelete@example.com", "todelete", "ToDelete");
 
         userStorage.delete(created.getId());
@@ -93,7 +93,7 @@ class UserDbStorageTest {
     }
 
     @Test
-    void testContains() {
+    public void testContains() {
         User created = createUser("exists@example.com", "exists", "Exists");
 
         assertThat(userStorage.contains(created.getId())).isTrue();

@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({MpaDbStorage.class, MpaRowMapper.class})
 @Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-class MpaDbStorageTest {
+public class MpaDbStorageTest {
 
     private final MpaDbStorage mpaStorage;
 
     @Test
-    void testFindAll() {
+    public void testFindAll() {
         Collection<Mpa> mpas = mpaStorage.findAll();
 
         assertThat(mpas).isNotEmpty();
@@ -35,7 +35,7 @@ class MpaDbStorageTest {
     }
 
     @Test
-    void testFindById() {
+    public void testFindById() {
         Optional<Mpa> found = mpaStorage.findById(1L);
 
         assertThat(found).isPresent();
@@ -44,7 +44,7 @@ class MpaDbStorageTest {
     }
 
     @Test
-    void testFindByIdNotFound() {
+    public void testFindByIdNotFound() {
         Optional<Mpa> found = mpaStorage.findById(999L);
 
         assertThat(found).isEmpty();

@@ -12,12 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @JdbcTest
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-class TestDataSqlLoaded {
+public class TestDataSqlLoaded {
 
     private final JdbcTemplate jdbcTemplate;
 
     @Test
-    void testDataSqlLoaded() {
+    public void testDataSqlLoaded() {
         Integer mpaCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM mpa_rating", Integer.class);
         Integer genreCount = jdbcTemplate.queryForObject(
