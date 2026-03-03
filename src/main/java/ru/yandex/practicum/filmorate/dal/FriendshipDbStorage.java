@@ -4,6 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 
@@ -42,10 +43,16 @@ public class FriendshipDbStorage extends BaseDbStorage<User> implements Friendsh
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        Integer count = jdbcTemplate.queryForObject(CHECK_FRIENDSHIP, Integer.class, userId, friendId);
-        if (count != null && count > 0) {
-            return; // Уже есть, ничего не делаем
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Пользователь не может быть другом сам себе");
         }
+
+        Integer count = jdbcTemplate.queryForObject(CHECK_FRIENDSHIP, Integer.class, userId, friendId);
+
+        if (count != null && count > 0) {
+            return;
+        }
+
         jdbcTemplate.update(ADD_FRIEND, userId, friendId);
     }
 
@@ -57,18 +64,22 @@ public class FriendshipDbStorage extends BaseDbStorage<User> implements Friendsh
     @Override
     public Collection<User> getFriends(Long userId) {
         List<Long> friendIds = jdbcTemplate.queryForList(GET_FRIENDS_IDS, Long.class, userId);
+
         if (friendIds.isEmpty()) {
             return Collections.emptyList();
         }
+
         return getUsersByIds(friendIds);
     }
 
     @Override
     public Collection<User> getCommonFriends(Long userId, Long otherUserId) {
         List<Long> commonIds = jdbcTemplate.queryForList(GET_COMMON_FRIENDS_IDS, Long.class, userId, otherUserId);
+
         if (commonIds.isEmpty()) {
             return Collections.emptyList();
         }
+
         return getUsersByIds(commonIds);
     }
 
