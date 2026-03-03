@@ -29,7 +29,6 @@ public class UserService {
     }
 
     public User registerUser(User user) {
-        // Если имя пустое — используем логин
         if (user.getName() == null || user.getName().isBlank()) {
             log.info("Имя пользователя не указано, используем логин: {}", user.getLogin());
             user.setName(user.getLogin());
@@ -58,6 +57,14 @@ public class UserService {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Пользователь с идентификатором %d не найден", userId)));
+    }
+
+    public void deleteUser(Long userId) {
+        if (!userStorage.contains(userId)) {
+            log.warn("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
+        }
+        userStorage.delete(userId);
     }
 
     public void sendFriendRequest(Long userId, Long friendId) {

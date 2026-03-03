@@ -72,6 +72,7 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
         executeUpdate(DELETE, id);
     }
 
+    @Override
     public boolean contains(Long id) {
         return exists(EXISTS, id);
     }

@@ -80,9 +80,8 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public void excludeUser(@PathVariable @Positive(message = "ID должен быть положительным") Long id) {
+    public void deleteUser(@PathVariable @Positive(message = "ID должен быть положительным") Long id) {
         log.info("Удаление пользователя с id={}", id);
-        // Если метод есть в сервисе
-        // userService.deleteUser(id);
+        userService.deleteUser(id);
     }
 }
