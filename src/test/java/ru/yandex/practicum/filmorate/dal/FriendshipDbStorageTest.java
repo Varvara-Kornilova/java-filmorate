@@ -11,12 +11,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
 import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
 import java.util.Collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @JdbcTest
 @AutoConfigureTestDatabase
@@ -88,10 +90,23 @@ public class FriendshipDbStorageTest {
     @Test
     public void testGetCommonFriendsEmpty() {
         friendshipStorage.addFriend(user1.getId(), user3.getId());
-        // user2 не имеет общих друзей с user1
 
         Collection<User> common = friendshipStorage.getCommonFriends(user1.getId(), user2.getId());
         assertThat(common).isEmpty();
+    }
+
+    @Test
+    public void testAddSelfAsFriend() {
+        assertThatThrownBy(() -> friendshipStorage.addFriend(user1.getId(), user1.getId()))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("Пользователь не может быть другом сам себе");
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM friendship WHERE user_id = ? AND friend_id = ?",
+                Integer.class,
+                user1.getId(), user1.getId()
+        );
+        assertThat(count).isEqualTo(0);
     }
 
     private User createUser(String email, String login, String name) {

@@ -43,6 +43,7 @@ public class FriendshipDbStorage extends BaseDbStorage<User> implements Friendsh
 
     @Override
     public void addFriend(Long userId, Long friendId) {
+
         if (userId.equals(friendId)) {
             throw new ValidationException("Пользователь не может быть другом сам себе");
         }
