@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -66,7 +67,11 @@ public class ErrorHandlerControllerAdvice {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    public Violation handleError(final Exception e) {
+    public Violation handleError(final Exception e, HttpServletRequest request) {
+        if (request != null && request.getRequestURI().startsWith("/h2-console")) {
+            throw new RuntimeException(e);
+        }
+
         return new Violation("internal_error", "Произошла непредвиденная ошибка.");
     }
 }

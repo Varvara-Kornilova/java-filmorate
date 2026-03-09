@@ -1,6 +1,6 @@
 package ru.yandex.practicum.filmorate.validator;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -10,10 +10,16 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 @Component
-@RequiredArgsConstructor
 public class EntityValidator {
+
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+
+    public EntityValidator(@Qualifier("filmDbStorage") FilmStorage filmStorage,
+                           @Qualifier("userDbStorage") UserStorage userStorage) {
+        this.filmStorage = filmStorage;
+        this.userStorage = userStorage;
+    }
 
     public Film getFilmOrThrow(Long filmId) {
         if (filmId == null || filmId <= 0) {
@@ -21,16 +27,18 @@ public class EntityValidator {
         }
 
         return filmStorage.findById(filmId)
-                .orElseThrow(() -> new NotFoundException("Фильм с id = " + filmId + " не найден"));
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Фильм с идентификатором %d не найден", filmId)));
     }
+
 
     public User getUserOrThrow(Long userId) {
         if (userId == null || userId <= 0) {
             throw new ValidationException("ID пользователя не может быть пустым или отрицательным");
         }
 
-        return userStorage.findUserById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
-
+        return userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с идентификатором %d не найден", userId)));
     }
 }

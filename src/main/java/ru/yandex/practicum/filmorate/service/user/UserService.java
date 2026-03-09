@@ -1,102 +1,114 @@
 package ru.yandex.practicum.filmorate.service.user;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.DuplicateDataException;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
-import ru.yandex.practicum.filmorate.validator.EntityValidator;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.Collection;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
+@Transactional
 public class UserService {
+
     private final UserStorage userStorage;
-    private final EntityValidator validator;
+    private final FriendshipStorage friendshipStorage;
 
-    public User addFriend(Long userId, Long friendId) {
-        log.debug("Добавление дружбы: пользователь {} добавляет {}", userId, friendId);
+    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage) {
+        this.userStorage = userStorage;
+        this.friendshipStorage = friendshipStorage;
+    }
 
-        User user = validator.getUserOrThrow(userId);
-        User friend = validator.getUserOrThrow(friendId);
+    public Collection<User> getAllUsers() {
+        return userStorage.findAll();
+    }
+
+    public User registerUser(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            log.info("Имя пользователя не указано, используем логин: {}", user.getLogin());
+            user.setName(user.getLogin());
+        }
+        return userStorage.create(user);
+    }
+
+    public User modifyUser(User updatedUser) {
+        if (updatedUser.getId() == null) {
+            log.warn("Попытка обновления пользователя без ID");
+            throw new ValidationException("Идентификатор пользователя должен быть указан");
+        }
+
+        User existingUser = userStorage.findById(updatedUser.getId())
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с идентификатором %d не найден", updatedUser.getId())));
+
+        if (updatedUser.getName() == null || updatedUser.getName().isBlank()) {
+            updatedUser.setName(updatedUser.getLogin());
+        }
+
+        return userStorage.update(updatedUser);
+    }
+
+    public User getUserById(Long userId) {
+        return userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с идентификатором %d не найден", userId)));
+    }
+
+    public void deleteUser(Long userId) {
+        if (!userStorage.contains(userId)) {
+            log.warn("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
+        }
+        userStorage.delete(userId);
+    }
+
+    public void sendFriendRequest(Long userId, Long friendId) {
+        validateUsersExist(userId, friendId);
 
         if (userId.equals(friendId)) {
-            log.warn("Попытка добавить себя в друзья: пользователь {}", userId);
-            throw new DuplicateDataException("Пользователь не может добавить себя в друзья");
+            throw new ValidationException("Пользователь не может быть другом сам себе");
         }
 
-        boolean userAddedFriend = user.getFriends().add(friendId);
-        boolean friendAddedUser = friend.getFriends().add(userId);
-
-        if (userAddedFriend && friendAddedUser) {
-            log.info("Дружба установлена: пользователи {} и {} теперь друзья", userId, friendId);
-        } else {
-            log.debug("Дружба уже существует между пользователями {} и {}", userId, friendId);
-        }
-
-        return user;
+        friendshipStorage.addFriend(userId, friendId);
+        log.info("Пользователь {} добавил в друзья пользователя {}", userId, friendId);
     }
 
-    public User removeFriend(Long userId, Long friendId) {
-        log.debug("Удаление дружбы: пользователь {} удаляет {}", userId, friendId);
-
-        User user = validator.getUserOrThrow(userId);
-        User friend = validator.getUserOrThrow(friendId);
-
-        if (userId.equals(friendId)) {
-            log.warn("Попытка удалить себя из друзей: пользователь {}", userId);
-            throw new DuplicateDataException("Пользователь не может удалить себя из друзей");
+    public void removeFriend(Long userId, Long friendId) {
+        if (!userStorage.findById(userId).isPresent()) {
+            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
+        }
+        if (!userStorage.findById(friendId).isPresent()) {
+            throw new NotFoundException("Пользователь с id = " + friendId + " не найден");
         }
 
-        boolean removedFromUser = user.getFriends().remove(friendId);
-        boolean removedFromFriend = friend.getFriends().remove(userId);
+        friendshipStorage.removeFriend(userId, friendId);
+        log.info("Пользователь {} удалил из друзей пользователя {}", userId, friendId);
+    }
 
-        if (removedFromUser && removedFromFriend) {
-            log.info("Дружба удалена: пользователи {} и {} больше не друзья", userId, friendId);
-        } else {
-            log.debug("Попытка удалить несуществующую дружбу между {} и {}", userId, friendId);
+    public Collection<User> getFriendsList(Long userId) {
+        if (!userStorage.findById(userId).isPresent()) {
+            throw new NotFoundException(
+                    String.format("Пользователь с идентификатором %d не найден", userId));
         }
-
-        return user;
+        return friendshipStorage.getFriends(userId);
     }
 
-    public List<User> getFriends(Long userId) {
-        log.debug("Запрос на получение друзей пользователя {}", userId);
-
-        User user = validator.getUserOrThrow(userId);
-
-        List<User> friends = user.getFriends().stream()
-                .map(friendId -> userStorage.findUserById(friendId)
-                        .orElseThrow(() -> new NotFoundException(
-                                "Друг с id = " + friendId + " не найден")))
-                .toList();
-
-        log.debug("У пользователя {} {} друзей", userId, friends.size());
-        return friends;
+    public Collection<User> getMutualFriends(Long userId, Long otherUserId) {
+        validateUsersExist(userId, otherUserId);
+        return friendshipStorage.getCommonFriends(userId, otherUserId);
     }
 
-    public List<User> getCommonFriends(Long userId, Long otherUserId) {
-        log.debug("Запрос на получение общих друзей: {} и {}", userId, otherUserId);
-
-        User user = validator.getUserOrThrow(userId);
-        User otherUser = validator.getUserOrThrow(otherUserId);
-
-        Set<Long> commonFriendIds = new HashSet<>(user.getFriends());
-        commonFriendIds.retainAll(otherUser.getFriends());
-
-        List<User> commonFriends = commonFriendIds.stream()
-                .map(friendId -> userStorage.findUserById(friendId)
-                        .orElseThrow(() -> new NotFoundException(
-                                "Друг с id = " + friendId + " не найден")))
-                .toList();
-
-        log.debug("У пользователей {} и {} {} общих друзей", userId, otherUserId, commonFriends.size());
-        return commonFriends;
+    private void validateUsersExist(Long userId, Long friendId) {
+        userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с идентификатором %d не найден", userId)));
+        userStorage.findById(friendId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с идентификатором %d не найден", friendId)));
     }
 }
