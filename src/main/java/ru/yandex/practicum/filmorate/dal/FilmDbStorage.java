@@ -25,33 +25,35 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
     private static final String FIND_BY_ID = SELECT_FILM + " WHERE f.film_id = ?";
     private static final String FIND_ALL = SELECT_FILM + " ORDER BY f.film_id";
     private static final String FIND_POPULAR = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            LEFT JOIN likes l ON f.film_id = l.film_id
-            GROUP BY f.film_id, mr.name
-            ORDER BY likes_count DESC, f.film_id
-            LIMIT ?
-            """;
+    SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+           f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
+           COUNT(DISTINCT l.user_id) AS likes_count
+    FROM films f
+    LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+    LEFT JOIN likes l ON f.film_id = l.film_id
+    GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
+             f.mpa_rating_id, mr.name, mr.description
+    ORDER BY likes_count DESC, f.film_id
+    LIMIT ?
+    """;
 
     private static final String FIND_BY_DIRECTOR_SORT_LIKES = """
     SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-           f.mpa_rating_id, mr.name AS mpa_name,
+           f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
            COUNT(DISTINCT l.user_id) AS likes_count
     FROM films f
     LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
     JOIN film_directors fd ON f.film_id = fd.film_id
     LEFT JOIN likes l ON f.film_id = l.film_id
     WHERE fd.director_id = ?
-    GROUP BY f.film_id, mr.name
+    GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
+             f.mpa_rating_id, mr.name, mr.description
     ORDER BY likes_count DESC, f.film_id
     """;
 
     private static final String FIND_BY_DIRECTOR_SORT_YEAR = """
     SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-           f.mpa_rating_id, mr.name AS mpa_name
+           f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
     FROM films f
     LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
     JOIN film_directors fd ON f.film_id = fd.film_id
@@ -99,6 +101,11 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         List<Film> films = jdbcTemplate.query(sql, rowMapper, directorId);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
+
+        for (Film film : films) {
+            loadLikes(film);
+        }
+
         return films;
     }
 
@@ -107,6 +114,11 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         List<Film> films = queryForList(FIND_ALL);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
+
+        for (Film film : films) {
+            loadLikes(film);
+        }
+
         return films;
     }
 
@@ -142,6 +154,7 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         filmOpt.ifPresent(film -> {
             loadGenres(film);
             loadDirectors(film);
+            loadLikes(film);
         });
         return filmOpt;
     }
@@ -158,6 +171,11 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         List<Film> films = jdbcTemplate.query(FIND_POPULAR, rowMapper, count);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
+
+        for (Film film : films) {
+            loadLikes(film);
+        }
+
         return films;
     }
 
@@ -198,5 +216,11 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         for (Film film : films) {
             loadDirectors(film);
         }
+    }
+
+    private void loadLikes(Film film) {
+        String sql = "SELECT user_id FROM likes WHERE film_id = ?";
+        List<Long> likeUserIds = jdbcTemplate.queryForList(sql, Long.class, film.getId());
+        film.setLikes(new HashSet<>(likeUserIds));
     }
 }
