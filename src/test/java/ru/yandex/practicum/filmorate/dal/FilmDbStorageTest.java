@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.model.*;
 
