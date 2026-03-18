@@ -64,6 +64,10 @@ public class FilmService {
         validateFilm(film);
         Film createdFilm = filmStorage.create(film);
 
+        if (film.getReleaseDate().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата релиза не может быть в будущем");
+        }
+
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             Set<Long> genreIds = extractGenreIds(film.getGenres());
             genreStorage.setGenres(createdFilm.getId(), genreIds);

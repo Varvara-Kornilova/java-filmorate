@@ -12,16 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class FilmDbStorageTest extends BaseJdbcTest {
 
-    @BeforeEach
-    public void additionalCleanUp() {
-        super.cleanUp();
-        jdbcTemplate.update("DELETE FROM film_directors");
-        jdbcTemplate.update("DELETE FROM film_genres");
-        jdbcTemplate.update("DELETE FROM likes");
-        jdbcTemplate.update("DELETE FROM films");
-        jdbcTemplate.update("DELETE FROM users");
-    }
-
     @Test
     public void testCreateFilmWithoutGenres() {
         Film film = createTestFilm();

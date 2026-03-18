@@ -22,8 +22,9 @@ import ru.yandex.practicum.filmorate.dal.mappers.*;
         GenreRowMapper.class,
         DirectorRowMapper.class,
         UserRowMapper.class,
-        MpaRowMapper.class
+        MpaRowMapper.class,
 })
+
 @Sql(scripts = "/data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public abstract class BaseJdbcTest {
 

@@ -15,14 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class DirectorDbStorageTest extends BaseJdbcTest {
 
-    @BeforeEach
-    public void additionalCleanUp() {
-        super.cleanUp();
-        jdbcTemplate.update("DELETE FROM film_directors");
-        jdbcTemplate.update("DELETE FROM film_genres");
-        jdbcTemplate.update("DELETE FROM films");
-    }
-
     @Test
     public void testFindAll() {
         Collection<Director> directors = directorStorage.findAll();

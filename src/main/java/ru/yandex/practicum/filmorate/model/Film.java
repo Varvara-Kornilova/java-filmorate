@@ -24,7 +24,7 @@ public class Film {
     private String description;
 
     @ValidReleaseDate
-    @PastOrPresent(message = "Дата релиза не может быть в будущем")
+    //@PastOrPresent(message = "Дата релиза не может быть в будущем")
     private LocalDate releaseDate;
 
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
@@ -39,6 +39,5 @@ public class Film {
 
     private Mpa mpa;
 
-    @JsonProperty("director")
     private Set<Director> directors = new HashSet<>();
 }
