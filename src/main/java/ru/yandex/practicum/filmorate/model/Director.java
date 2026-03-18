@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Director {
 
-    @NotNull
     private Long id;
 
     @NotNull

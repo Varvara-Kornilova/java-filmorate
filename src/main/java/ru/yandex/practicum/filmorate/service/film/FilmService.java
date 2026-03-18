@@ -70,7 +70,7 @@ public class FilmService {
             directorStorage.setDirectors(createdFilm.getId(), directorIds);
         }
 
-        return createdFilm;
+        return getFilmById(createdFilm.getId());
     }
 
     public Film editFilm(Film updatedFilm) {

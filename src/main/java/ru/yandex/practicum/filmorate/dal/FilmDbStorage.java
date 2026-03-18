@@ -16,11 +16,11 @@ import java.util.*;
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     private static final String SELECT_FILM = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            """;
+    SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+           f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
+    FROM films f
+    LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+    """;
 
     private static final String FIND_BY_ID = SELECT_FILM + " WHERE f.film_id = ?";
     private static final String FIND_ALL = SELECT_FILM + " ORDER BY f.film_id";
