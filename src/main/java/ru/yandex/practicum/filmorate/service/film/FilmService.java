@@ -5,14 +5,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.director.DirectorService;
 import ru.yandex.practicum.filmorate.service.genre.GenreService;
 import ru.yandex.practicum.filmorate.service.mpa.MpaService;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,15 +30,21 @@ public class FilmService {
     private final UserStorage userStorage;
     private final MpaService mpaService;
     private final GenreService genreService;
+    private final DirectorService directorService;
+    private final DirectorStorage directorStorage;
 
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
                        MpaService mpaService,
-                       GenreService genreService) {
+                       GenreService genreService,
+                       DirectorService directorService,
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.mpaService = mpaService;
         this.genreService = genreService;
+        this.directorService = directorService;
+        this.directorStorage = directorStorage;
     }
 
     public Collection<Film> getAllFilms() {
@@ -42,7 +53,16 @@ public class FilmService {
 
     public Film addFilm(Film film) {
         validateFilm(film);
-        return filmStorage.create(film);
+        Film createdFilm = filmStorage.create(film);
+
+        if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
+            Set<Long> directorIds = film.getDirectors().stream()
+                    .map(Director::getId)
+                    .collect(Collectors.toSet());
+            directorStorage.setDirectors(createdFilm.getId(), directorIds);
+        }
+
+        return createdFilm;
     }
 
     public Film editFilm(Film updatedFilm) {
@@ -57,6 +77,15 @@ public class FilmService {
         }
 
         validateFilm(updatedFilm);
+
+        if (updatedFilm.getDirectors() != null && !updatedFilm.getDirectors().isEmpty()) {
+            Set<Long> directorIds = updatedFilm.getDirectors().stream()
+                    .map(Director::getId)
+                    .collect(Collectors.toSet());
+            directorStorage.updateFilmDirectors(updatedFilm.getId());
+            directorStorage.setDirectors(updatedFilm.getId(), directorIds);
+        }
+
         return filmStorage.update(updatedFilm);
     }
 
@@ -123,6 +152,13 @@ public class FilmService {
                             .map(g -> g.getId())
                             .collect(java.util.stream.Collectors.toSet()));
         }
+
+        if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
+            directorService.validateDirectors(
+                    film.getDirectors().stream()
+                            .map(Director::getId)
+                            .collect(Collectors.toSet()));
+        }
     }
 
     private void validateFilmAndUser(Long filmId, Long userId) {
@@ -134,5 +170,11 @@ public class FilmService {
             throw new NotFoundException(
                     String.format("Пользователь с идентификатором %d не найден", userId));
         }
+    }
+
+    public Collection<Film> getFilmsByDirector(Long directorId, String sortBy) {
+        directorService.getDirectorById(directorId);
+        String sort = (sortBy != null && sortBy.equalsIgnoreCase("likes")) ? "likes" : "year";
+        return filmStorage.findByDirectorId(directorId, sort);
     }
 }

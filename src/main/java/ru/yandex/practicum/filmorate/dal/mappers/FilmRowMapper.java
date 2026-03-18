@@ -29,6 +29,8 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         film.setGenres(new HashSet<>());
 
+        film.setDirectors(new HashSet<>());
+
         return film;
     }
 
