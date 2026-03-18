@@ -11,7 +11,6 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
@@ -84,7 +83,8 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
     private final GenreStorage genreStorage;
     private final DirectorStorage directorStorage;
 
-    public FilmDbStorage(JdbcTemplate jdbcTemplate, FilmRowMapper filmRowMapper, GenreStorage genreStorage, DirectorStorage directorStorage) {
+    public FilmDbStorage(JdbcTemplate jdbcTemplate, FilmRowMapper filmRowMapper,
+                         GenreStorage genreStorage, DirectorStorage directorStorage) {
         super(jdbcTemplate, filmRowMapper);
         this.genreStorage = genreStorage;
         this.directorStorage = directorStorage;
@@ -92,13 +92,9 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     @Override
     public Collection<Film> findByDirectorId(Long directorId, String sortBy) {
-        String sql;
-
-        if ("likes".equalsIgnoreCase(sortBy)) {
-            sql = FIND_BY_DIRECTOR_SORT_LIKES;
-        } else {
-            sql = FIND_BY_DIRECTOR_SORT_YEAR;
-        }
+        String sql = "likes".equalsIgnoreCase(sortBy)
+                ? FIND_BY_DIRECTOR_SORT_LIKES
+                : FIND_BY_DIRECTOR_SORT_YEAR;
 
         List<Film> films = jdbcTemplate.query(sql, rowMapper, directorId);
         loadGenresForFilms(films);
@@ -124,17 +120,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                 film.getMpa().getId()
         );
         film.setId(id);
-
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            Set<Long> genreIds = extractGenreIds(film.getGenres());
-            genreStorage.setGenres(id, genreIds);
-        }
-
-        if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
-            Set<Long> directorIds = extractDirectorIds(film.getDirectors());
-            directorStorage.setDirectors(id, directorIds);
-        }
-
         return film;
     }
 
@@ -148,21 +133,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                 film.getMpa().getId(),
                 film.getId()
         );
-
-        genreStorage.updateFilmGenres(film.getId());
-
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            Set<Long> genreIds = extractGenreIds(film.getGenres());
-            genreStorage.setGenres(film.getId(), genreIds);
-        }
-
-        directorStorage.updateFilmDirectors(film.getId());
-
-        if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
-            Set<Long> directorIds = extractDirectorIds(film.getDirectors());
-            directorStorage.setDirectors(film.getId(), directorIds);
-        }
-
         return film;
     }
 
@@ -228,17 +198,5 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         for (Film film : films) {
             loadDirectors(film);
         }
-    }
-
-    private Set<Long> extractGenreIds(Set<Genre> genres) {
-        return genres.stream()
-                .map(Genre::getId)
-                .collect(Collectors.toSet());
-    }
-
-    private Set<Long> extractDirectorIds(Set<Director> directors) {
-        return directors.stream()
-                .map(Director::getId)
-                .collect(Collectors.toSet());
     }
 }
