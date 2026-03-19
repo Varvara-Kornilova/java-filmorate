@@ -20,6 +20,7 @@ import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.review.ReviewService;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 
 import java.time.LocalDate;
@@ -34,6 +35,7 @@ public class ReviewControllerTest {
     @Autowired private FilmRowMapper filmRowMapper;
     @Autowired private ReviewRowMapper reviewRowMapper;
     @Autowired private GenreStorage genreStorage;
+    @Autowired private DirectorStorage directorStorage;
 
     private ReviewController controller;
     private UserDbStorage userStorage;
@@ -43,7 +45,7 @@ public class ReviewControllerTest {
     void init() {
         clearTestData();
         userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
-        filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage);
+        filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage, directorStorage);
         ReviewDbStorage reviewStorage = new ReviewDbStorage(jdbcTemplate, reviewRowMapper);
 
         ReviewService reviewService = new ReviewService(reviewStorage, userStorage, filmStorage);
