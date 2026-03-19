@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.dal;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dal.mappers.ReviewRowMapper;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.storage.review.ReviewStorage;
 
@@ -20,9 +21,13 @@ public class ReviewDbStorage extends BaseDbStorage<Review> implements ReviewStor
     public Review create(Review review) {
         String sql = "INSERT INTO reviews (content, is_positive, user_id, film_id) VALUES (?, ?, ?, ?)";
         Long id = insertAndGetId(sql,
-                review.getContent(), review.getIsPositive(), review.getUserId(), review.getFilmId());
+                review.getContent(),
+                review.getIsPositive(),
+                review.getUserId(),
+                review.getFilmId());
+
         review.setReviewId(id);
-        return review;
+        return findById(id).orElseThrow(() -> new NotFoundException("Ошибка при создании отзыва"));
     }
 
     @Override
@@ -30,19 +35,20 @@ public class ReviewDbStorage extends BaseDbStorage<Review> implements ReviewStor
         String sql = "UPDATE reviews SET content = ?, is_positive = ? WHERE review_id = ?";
         executeUpdate(sql, review.getContent(), review.getIsPositive(), review.getReviewId());
 
-        return findById(review.getReviewId()).orElse(review);
+        return findById(review.getReviewId()).orElseThrow(() -> new NotFoundException("Отзыв не найден"));
     }
 
     @Override
     public Optional<Review> findById(Long id) {
-        String sql = "SELECT r.*, " +
-                        "COALESCE(" +
-                            "(SELECT COUNT(CASE WHEN is_like = true THEN 1 END) - " +
-                                    " COUNT(CASE WHEN is_like = false THEN 1 END) " +
-                            " FROM review_likes " +
-                            " WHERE review_id = r.review_id), 0) AS useful " +
-                     "FROM reviews r " +
-                     "WHERE r.review_id = ?";
+        String sql = "SELECT r.review_id, r.content, r.is_positive, r.user_id, r.film_id, " +
+                "COALESCE(" +
+                "(SELECT COUNT(CASE WHEN is_like = true THEN 1 END) - " +
+                " COUNT(CASE WHEN is_like = false THEN 1 END) " +
+                " FROM review_likes " +
+                " WHERE review_id = r.review_id), 0) AS useful " +
+                "FROM reviews r " +
+                "WHERE r.review_id = ?";
+
         return findOptional(sql, id);
     }
 
@@ -54,13 +60,13 @@ public class ReviewDbStorage extends BaseDbStorage<Review> implements ReviewStor
 
     @Override
     public Collection<Review> findAll(Long filmId, int count) {
-        String baseSql = "SELECT r.*, " +
-                            "COALESCE(" +
-                                "(SELECT COUNT(CASE WHEN is_like = true THEN 1 END) - " +
-                                "        COUNT(CASE WHEN is_like = false THEN 1 END) " +
-                                " FROM review_likes " +
-                                " WHERE review_id = r.review_id), 0) AS useful " +
-                            "FROM reviews r ";
+        String baseSql = "SELECT r.review_id, r.content, r.is_positive, r.user_id, r.film_id, " +
+                "COALESCE(" +
+                "(SELECT COUNT(CASE WHEN is_like = true THEN 1 END) - " +
+                "        COUNT(CASE WHEN is_like = false THEN 1 END) " +
+                " FROM review_likes " +
+                " WHERE review_id = r.review_id), 0) AS useful " +
+                "FROM reviews r ";
         if (filmId == null) {
             String sql = baseSql + " ORDER BY useful DESC LIMIT ?";
             return queryForList(sql, count);
@@ -72,13 +78,13 @@ public class ReviewDbStorage extends BaseDbStorage<Review> implements ReviewStor
 
     @Override
     public void addLike(Long reviewId, Long userId) {
-        String sql = "INSERT INTO review_likes (review_id, user_id, is_like) VALUES (?, ?, true)";
+        String sql = "MERGE INTO review_likes (review_id, user_id, is_like) KEY(review_id, user_id) VALUES (?, ?, true)";
         executeUpdate(sql, reviewId, userId);
     }
 
     @Override
     public void addDislike(Long reviewId, Long userId) {
-        String sql = "INSERT INTO review_likes (review_id, user_id, is_like) VALUES (?, ?, false)";
+        String sql = "MERGE INTO review_likes (review_id, user_id, is_like) KEY(review_id, user_id) VALUES (?, ?, false)";
         executeUpdate(sql, reviewId, userId);
     }
 

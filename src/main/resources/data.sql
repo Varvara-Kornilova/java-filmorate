@@ -25,6 +25,13 @@ ALTER TABLE genres ALTER COLUMN genre_id RESTART WITH 1;
 ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;
 
+--Сброс для отзывов. Begin
+DELETE FROM review_likes;
+DELETE FROM reviews;
+
+ALTER TABLE reviews ALTER COLUMN review_id RESTART WITH 1;
+--Сброс для отзывов. End
+
 -- ===========================================
 -- Заполнение справочников
 -- ===========================================
