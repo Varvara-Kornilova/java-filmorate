@@ -10,6 +10,8 @@ DELETE FROM friendship;
 -- Затем основные таблицы
 DELETE FROM films;
 DELETE FROM users;
+DELETE FROM directors;
+DELETE FROM film_directors;
 
 -- Справочники + сброс ID
 DELETE FROM mpa_rating;
@@ -24,6 +26,7 @@ ALTER TABLE genres ALTER COLUMN genre_id RESTART WITH 1;
 -- Сброс ID в основных таблицах
 ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;
+ALTER TABLE directors ALTER COLUMN director_id RESTART WITH 1;
 
 -- ===========================================
 -- Заполнение справочников
@@ -47,3 +50,10 @@ INSERT INTO genres (name) VALUES
     ('Триллер'),
     ('Документальный'),
     ('Боевик');
+
+INSERT INTO directors (name) VALUES
+    ('Квентин Тарантино'),
+    ('Кристофер Нолан'),
+    ('Найт Шьямалан'),
+    ('Стивен Спилберг'),
+    ('Дэвид Финчер');

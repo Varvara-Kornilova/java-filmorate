@@ -22,5 +22,7 @@ public interface FilmStorage {
 
     Long removeLike(Long filmId, Long userId);
 
-    public boolean contains(Long id);
+    boolean contains(Long id);
+
+    Collection<Film> findByDirectorId(Long directorId, String sortBy);
 }

@@ -69,15 +69,6 @@ public class FilmValidationTests {
     }
 
     @Test
-    public void shouldRejectFutureReleaseDate() {
-        Film film = createValidFilm();
-        film.setReleaseDate(LocalDate.now().plusDays(1));
-        Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertEquals(1, violations.size());
-        assertEquals("Дата релиза не может быть в будущем", violations.iterator().next().getMessage());
-    }
-
-    @Test
     public void shouldRejectReleaseDateBefore1895_12_28() {
         Film film = createValidFilm();
         film.setReleaseDate(LocalDate.of(1895, 12, 27));

@@ -29,6 +29,8 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         film.setGenres(new HashSet<>());
 
+        film.setDirectors(new HashSet<>());
+
         return film;
     }
 
@@ -37,7 +39,14 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         if (!rs.wasNull()) {
             String mpaName = rs.getString("mpa_name");
-            film.setMpa(Mpa.of(mpaId, mpaName));
+            String mpaDescription = rs.getString("mpa_description");  // ← Читаем описание
+
+            Mpa mpa = new Mpa();
+            mpa.setId(mpaId);
+            mpa.setName(mpaName);
+            mpa.setDescription(mpaDescription);
+
+            film.setMpa(mpa);
         }
     }
 }
