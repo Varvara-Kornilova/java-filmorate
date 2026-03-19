@@ -37,9 +37,13 @@ public class FilmController {
 
     @GetMapping("/popular")
     public Collection<Film> fetchPopularFilms(
-            @RequestParam(defaultValue = "10") @Positive(message = "Количество должно быть положительным") Integer count) {
-        log.info("Запрошены популярные фильмы (limit={})", count);
-        return filmService.getMostPopularFilms(count);
+            @RequestParam(defaultValue = "10") @Positive(message = "Количество должно быть положительным") Integer count,
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) Integer year) {
+
+        log.info("Запрошены популярные фильмы (limit={}, genreId={}, year={})", count, genreId, year);
+
+        return filmService.getMostPopularFilms(count, genreId, year);
     }
 
     @GetMapping("/director/{directorId}")
