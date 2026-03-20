@@ -17,10 +17,7 @@ import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -214,6 +211,16 @@ public class FilmService {
         directorService.getDirectorById(directorId);
         String sort = (sortBy != null && sortBy.equalsIgnoreCase("likes")) ? "likes" : "year";
         Collection<Film> films = filmStorage.findByDirectorId(directorId, sort);
+        films.forEach(this::sortFilmCollections);
+        return films;
+    }
+
+    public Collection<Film> searchFilms(String query, String by) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+
+        Collection<Film> films = filmStorage.search(query, by);
         films.forEach(this::sortFilmCollections);
         return films;
     }
