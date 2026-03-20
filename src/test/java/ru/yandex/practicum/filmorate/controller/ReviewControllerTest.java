@@ -42,7 +42,7 @@ public class ReviewControllerTest {
     private FilmDbStorage filmStorage;
 
     @BeforeEach
-    void init() {
+    public void init() {
         clearTestData();
         userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
         filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage, directorStorage);
@@ -95,7 +95,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void create_ReturnSavedReview_whenDataIsValid() {
+    public void create_ReturnSavedReview_whenDataIsValid() {
         User user = createTestUser();
         Film film = createTestFilm();
         Review review = buildReview(user.getId(), film.getId());
@@ -107,7 +107,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void update_UpdateReviewFields_whenDataIsValid() {
+    public void update_UpdateReviewFields_whenDataIsValid() {
         User user = createTestUser();
         Film film = createTestFilm();
         Review review = controller.create(buildReview(user.getId(), film.getId()));
@@ -128,7 +128,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void delete_RemoveReview_whenReviewExists() {
+    public void delete_RemoveReview_whenReviewExists() {
         User user = createTestUser();
         Film film = createTestFilm();
         Review review = controller.create(buildReview(user.getId(), film.getId()));
@@ -139,7 +139,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void findAll_ReturnReviewsSortedByUsefulRating_whenCalledWithoutFilmId() {
+    public void findAll_ReturnReviewsSortedByUsefulRating_whenCalledWithoutFilmId() {
         User user = createTestUser();
         Film film = createTestFilm();
 
@@ -154,7 +154,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void addLike_IncreaseUsefulRating() {
+    public void addLike_IncreaseUsefulRating() {
         User liker = createTestUser();
         User author = createTestUser();
         Film film = createTestFilm();
@@ -166,7 +166,7 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void addDislike_DecreaseUsefulRating() {
+    public void addDislike_DecreaseUsefulRating() {
         User disliker = createTestUser();
         User author = createTestUser();
         Film film = createTestFilm();
