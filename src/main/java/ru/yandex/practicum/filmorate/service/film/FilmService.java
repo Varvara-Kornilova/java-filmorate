@@ -56,7 +56,7 @@ public class FilmService {
 
     public Collection<Film> getAllFilms() {
         Collection<Film> films = filmStorage.findAll();
-        films.forEach(this::sortFilmCollections);  // ← Сортируем каждый
+        films.forEach(this::sortFilmCollections);
         return films;
     }
 
@@ -72,6 +72,7 @@ public class FilmService {
             Set<Long> genreIds = extractGenreIds(film.getGenres());
             genreStorage.setGenres(createdFilm.getId(), genreIds);
         }
+
         if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
             Set<Long> directorIds = extractDirectorIds(film.getDirectors());
             directorStorage.setDirectors(createdFilm.getId(), directorIds);
@@ -94,15 +95,19 @@ public class FilmService {
         validateFilm(updatedFilm);
         filmStorage.update(updatedFilm);
 
+        // Очищаем старые жанры фильма
         genreStorage.updateFilmGenres(updatedFilm.getId());
 
+        // Сохраняем новые жанры фильма
         if (updatedFilm.getGenres() != null && !updatedFilm.getGenres().isEmpty()) {
             Set<Long> genreIds = extractGenreIds(updatedFilm.getGenres());
             genreStorage.setGenres(updatedFilm.getId(), genreIds);
         }
 
+        // Очищаем старых режиссёров фильма
         directorStorage.updateFilmDirectors(updatedFilm.getId());
 
+        // Сохраняем новых режиссёров фильма
         if (updatedFilm.getDirectors() != null && !updatedFilm.getDirectors().isEmpty()) {
             Set<Long> directorIds = extractDirectorIds(updatedFilm.getDirectors());
             directorStorage.setDirectors(updatedFilm.getId(), directorIds);
@@ -119,11 +124,17 @@ public class FilmService {
         return film;
     }
 
-    public Collection<Film> getMostPopularFilms(Integer count) {
+    // Получить популярные фильмы с фильтрацией по жанру и году
+    public Collection<Film> getMostPopularFilms(Integer count, Long genreId, Integer year) {
         if (count == null || count <= 0) {
             count = 10;
         }
-        Collection<Film> films = filmStorage.getPopular(count);
+
+        if (genreId != null) {
+            genreService.getGenreById(genreId);
+        }
+
+        Collection<Film> films = filmStorage.getPopular(count, genreId, year);
         films.forEach(this::sortFilmCollections);
         return films;
     }
@@ -192,6 +203,7 @@ public class FilmService {
             throw new NotFoundException(
                     String.format("Фильм с идентификатором %d не найден", filmId));
         }
+
         if (!userStorage.findById(userId).isPresent()) {
             throw new NotFoundException(
                     String.format("Пользователь с идентификатором %d не найден", userId));
@@ -224,6 +236,7 @@ public class FilmService {
                     .sorted(Comparator.comparing(Genre::getId))
                     .collect(Collectors.toCollection(LinkedHashSet::new)));
         }
+
         if (film.getDirectors() != null) {
             film.setDirectors(film.getDirectors().stream()
                     .sorted(Comparator.comparing(Director::getId))

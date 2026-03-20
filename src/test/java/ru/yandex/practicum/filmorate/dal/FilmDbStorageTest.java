@@ -1,11 +1,14 @@
 package ru.yandex.practicum.filmorate.dal;
 
 import org.junit.jupiter.api.Test;
-import ru.yandex.practicum.filmorate.model.*;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,23 +33,28 @@ public class FilmDbStorageTest extends BaseJdbcTest {
     @Test
     public void testFindAll() {
         filmStorage.create(createTestFilm());
-        filmStorage.create(createTestFilm("Film Two", "Desc Two"));
+        filmStorage.create(createTestFilm("Film Two", "Desc Two", LocalDate.of(2023, 1, 1)));
 
         Collection<Film> films = filmStorage.findAll();
+
         assertThat(films).hasSize(2);
-        assertThat(films).extracting("name").containsExactlyInAnyOrder("Test Film", "Film Two");
+        assertThat(films).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Test Film", "Film Two");
     }
 
     @Test
     public void testDelete() {
         Film film = filmStorage.create(createTestFilm());
+
         filmStorage.delete(film.getId());
+
         assertThat(filmStorage.findById(film.getId())).isEmpty();
     }
 
     @Test
     public void testContains() {
         Film film = filmStorage.create(createTestFilm());
+
         assertThat(filmStorage.contains(film.getId())).isTrue();
         assertThat(filmStorage.contains(999L)).isFalse();
     }
@@ -60,21 +68,27 @@ public class FilmDbStorageTest extends BaseJdbcTest {
 
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
-                Integer.class, film.getId(), user.getId());
+                Integer.class,
+                film.getId(),
+                user.getId()
+        );
         assertThat(count).isEqualTo(1);
 
         filmStorage.removeLike(film.getId(), user.getId());
 
         count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
-                Integer.class, film.getId(), user.getId());
+                Integer.class,
+                film.getId(),
+                user.getId()
+        );
         assertThat(count).isEqualTo(0);
     }
 
     @Test
-    public void testGetPopular() {
-        Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One"));
-        Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two"));
+    public void testGetPopularWithoutFilters() {
+        Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One", LocalDate.of(2022, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two", LocalDate.of(2023, 1, 1)));
 
         User user1 = createTestUser("u1@test.com", "user1");
         User user2 = createTestUser("u2@test.com", "user2");
@@ -84,7 +98,8 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         filmStorage.addLike(film2.getId(), user2.getId());
         filmStorage.addLike(film2.getId(), user3.getId());
 
-        Collection<Film> popular = filmStorage.getPopular(2);
+        Collection<Film> popular = filmStorage.getPopular(2, null, null);
+
         assertThat(popular).hasSize(2);
         assertThat(popular.iterator().next().getName()).isEqualTo("Popular Film");
     }
@@ -92,21 +107,89 @@ public class FilmDbStorageTest extends BaseJdbcTest {
     @Test
     public void testGetPopularWithLimit() {
         for (int i = 0; i < 5; i++) {
-            filmStorage.create(createTestFilm("Film " + i, "Desc " + i));
+            filmStorage.create(createTestFilm("Film " + i, "Desc " + i, LocalDate.of(2024, 1, 1)));
         }
-        Collection<Film> popular = filmStorage.getPopular(3);
+
+        Collection<Film> popular = filmStorage.getPopular(3, null, null);
+
         assertThat(popular).hasSize(3);
     }
 
-    private Film createTestFilm() {
-        return createTestFilm("Test Film", "Test Description");
+    @Test
+    public void testGetPopularFilteredByGenre() {
+        Film comedyFilm = filmStorage.create(createTestFilm("Comedy Film", "Funny", LocalDate.of(2024, 1, 1)));
+        Film dramaFilm = filmStorage.create(createTestFilm("Drama Film", "Sad", LocalDate.of(2024, 1, 1)));
+
+        // Привязываем жанры к фильмам
+        genreStorage.setGenres(comedyFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(dramaFilm.getId(), Set.of(2L));
+
+        User user1 = createTestUser("genre1@test.com", "genre1");
+        User user2 = createTestUser("genre2@test.com", "genre2");
+
+        filmStorage.addLike(comedyFilm.getId(), user1.getId());
+        filmStorage.addLike(dramaFilm.getId(), user1.getId());
+        filmStorage.addLike(dramaFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, null);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Comedy Film");
     }
 
-    private Film createTestFilm(String name, String description) {
+    @Test
+    public void testGetPopularFilteredByYear() {
+        Film oldFilm = filmStorage.create(createTestFilm("Old Film", "Old", LocalDate.of(2023, 1, 1)));
+        Film newFilm = filmStorage.create(createTestFilm("New Film", "New", LocalDate.of(2024, 1, 1)));
+
+        User user1 = createTestUser("year1@test.com", "year1");
+        User user2 = createTestUser("year2@test.com", "year2");
+
+        filmStorage.addLike(oldFilm.getId(), user1.getId());
+        filmStorage.addLike(newFilm.getId(), user1.getId());
+        filmStorage.addLike(newFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, null, 2023);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Old Film");
+    }
+
+    @Test
+    public void testGetPopularFilteredByGenreAndYear() {
+        Film neededFilm = filmStorage.create(createTestFilm("Needed Film", "Target", LocalDate.of(2024, 5, 1)));
+        Film sameGenreOtherYear = filmStorage.create(createTestFilm("Same Genre Other Year", "Other", LocalDate.of(2023, 5, 1)));
+        Film sameYearOtherGenre = filmStorage.create(createTestFilm("Same Year Other Genre", "Other", LocalDate.of(2024, 6, 1)));
+
+        // Привязываем жанры к фильмам
+        genreStorage.setGenres(neededFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(sameGenreOtherYear.getId(), Set.of(1L));
+        genreStorage.setGenres(sameYearOtherGenre.getId(), Set.of(2L));
+
+        User user1 = createTestUser("both1@test.com", "both1");
+        User user2 = createTestUser("both2@test.com", "both2");
+        User user3 = createTestUser("both3@test.com", "both3");
+
+        filmStorage.addLike(neededFilm.getId(), user1.getId());
+        filmStorage.addLike(neededFilm.getId(), user2.getId());
+        filmStorage.addLike(sameGenreOtherYear.getId(), user3.getId());
+        filmStorage.addLike(sameYearOtherGenre.getId(), user3.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, 2024);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Needed Film");
+    }
+
+    private Film createTestFilm() {
+        return createTestFilm("Test Film", "Test Description", LocalDate.of(2024, 1, 1));
+    }
+
+    private Film createTestFilm(String name, String description, LocalDate releaseDate) {
         Film film = new Film();
         film.setName(name);
         film.setDescription(description);
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
+        film.setReleaseDate(releaseDate);
         film.setDuration(120);
         film.setMpa(new Mpa(1L, "G", null));
         return film;
