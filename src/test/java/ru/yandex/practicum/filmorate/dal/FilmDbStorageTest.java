@@ -183,7 +183,7 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         assertThat(popular.iterator().next().getName()).isEqualTo("Needed Film");
     }
 
-        private Film createTestFilm() {
+    private Film createTestFilm() {
         return createTestFilm("Test Film", "Test Description", LocalDate.of(2024, 1, 1));
     }
 
@@ -194,7 +194,13 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         film.setReleaseDate(releaseDate);
         film.setDuration(120);
         film.setMpa(new Mpa(1L, "G", null));
-        return filmStorage.create(film);  // Сохраняем в БД
+        return film;  // НЕ сохраняем в БД - для существующих тестов
+    }
+
+    // НОВЫЙ МЕТОД - сохраняет фильм в БД для новых тестов
+    private Film createAndSaveTestFilm(String name, String description, LocalDate releaseDate) {
+        Film film = createTestFilm(name, description, releaseDate);
+        return filmStorage.create(film);
     }
 
     private User createTestUser(String email, String login) {
@@ -213,10 +219,10 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
-        // Создаём фильмы
-        Film film1 = createTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
-        Film film2 = createTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
-        Film film3 = createTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
+        // Создаём фильмы (сохраняем в БД)
+        Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
 
         // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
@@ -239,10 +245,10 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         User user3 = createTestUser("userC@test.com", "userC");
         User user4 = createTestUser("userD@test.com", "userD");
 
-        // Создаём фильмы
-        Film film1 = createTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
-        Film film2 = createTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
-        Film film3 = createTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
+        // Создаём фильмы (сохраняем в БД)
+        Film film1 = createAndSaveTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
 
         // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
@@ -271,8 +277,8 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         User user1 = createTestUser("userX@test.com", "userX");
         User user2 = createTestUser("userY@test.com", "userY");
 
-        Film film1 = createTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1));
-        Film film2 = createTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1));
+        Film film1 = createAndSaveTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1));
 
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film2.getId(), user2.getId());
