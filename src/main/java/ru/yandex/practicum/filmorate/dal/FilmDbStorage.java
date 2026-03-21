@@ -298,6 +298,16 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         return films;
     }
 
+    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);
+        loadGenresForFilms(films);
+        loadDirectorsForFilms(films);
+        loadLikesForFilms(films);
+        return films;
+    }
+
     private void loadGenres(Film film) {
         Set<Genre> genres = genreStorage.getGenresByFilmId(film.getId());
         film.setGenres(genres);
