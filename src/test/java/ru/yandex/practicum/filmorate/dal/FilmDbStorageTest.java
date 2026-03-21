@@ -183,7 +183,7 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         assertThat(popular.iterator().next().getName()).isEqualTo("Needed Film");
     }
 
-    private Film createTestFilm() {
+        private Film createTestFilm() {
         return createTestFilm("Test Film", "Test Description", LocalDate.of(2024, 1, 1));
     }
 
@@ -194,7 +194,7 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         film.setReleaseDate(releaseDate);
         film.setDuration(120);
         film.setMpa(new Mpa(1L, "G", null));
-        return film;
+        return filmStorage.create(film);  // Сохраняем в БД
     }
 
     private User createTestUser(String email, String login) {
@@ -206,7 +206,7 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         return userStorage.create(user);
     }
 
-        // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
+    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void testGetCommonFilms() {
         // Создаём пользователей
