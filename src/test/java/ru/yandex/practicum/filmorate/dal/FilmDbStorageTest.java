@@ -281,19 +281,4 @@ public class FilmDbStorageTest extends BaseJdbcTest {
 
         assertThat(commonFilms).isEmpty();
     }
-
-    private Director createTestDirector(String name) {
-        String sql = "INSERT INTO directors (name) VALUES (?)";
-        GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"director_id"});
-            ps.setString(1, name);
-            return ps;
-        }, keyHolder);
-
-        Director director = new Director();
-        director.setId(keyHolder.getKey().longValue());
-        director.setName(name);
-        return director;
-    }
 }
