@@ -6,6 +6,7 @@
 DELETE FROM film_genres;
 DELETE FROM likes;
 DELETE FROM friendship;
+DELETE FROM events;
 
 -- Затем основные таблицы
 DELETE FROM films;
@@ -27,6 +28,7 @@ ALTER TABLE directors ALTER COLUMN director_id RESTART WITH 1;
 -- Сброс ID в основных таблицах
 ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;
+ALTER TABLE events ALTER COLUMN event_id RESTART WITH 1;
 
 --Сброс для отзывов. Begin
 DELETE FROM review_likes;

@@ -5,7 +5,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
@@ -18,10 +21,14 @@ public class UserService {
 
     private final UserStorage userStorage;
     private final FriendshipStorage friendshipStorage;
+    private final EventService eventService; // сервис событий
 
-    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage) {
+    public UserService(UserStorage userStorage,
+                       FriendshipStorage friendshipStorage,
+                       EventService eventService) {
         this.userStorage = userStorage;
         this.friendshipStorage = friendshipStorage;
+        this.eventService = eventService;
     }
 
     public Collection<User> getAllUsers() {
@@ -76,6 +83,9 @@ public class UserService {
 
         friendshipStorage.addFriend(userId, friendId);
         log.info("Пользователь {} добавил в друзья пользователя {}", userId, friendId);
+
+        // записываем событие добавления в друзья
+        eventService.addEvent(userId, EventType.FRIEND, EventOperation.ADD, friendId);
     }
 
     public void removeFriend(Long userId, Long friendId) {
@@ -88,6 +98,9 @@ public class UserService {
 
         friendshipStorage.removeFriend(userId, friendId);
         log.info("Пользователь {} удалил из друзей пользователя {}", userId, friendId);
+
+        // записываем событие удаления из друзей
+        eventService.addEvent(userId, EventType.FRIEND, EventOperation.REMOVE, friendId);
     }
 
     public Collection<User> getFriendsList(Long userId) {

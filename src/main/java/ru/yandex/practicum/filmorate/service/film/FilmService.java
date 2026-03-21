@@ -6,9 +6,12 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;
+import ru.yandex.practicum.filmorate.model.EventOperation;
+import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.service.director.DirectorService;
+import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.service.genre.GenreService;
 import ru.yandex.practicum.filmorate.service.mpa.MpaService;
 import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
@@ -17,7 +20,11 @@ import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,6 +41,7 @@ public class FilmService {
     private final DirectorService directorService;
     private final DirectorStorage directorStorage;
     private final GenreStorage genreStorage;
+    private final EventService eventService;
 
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
@@ -41,7 +49,8 @@ public class FilmService {
                        GenreService genreService,
                        DirectorService directorService,
                        DirectorStorage directorStorage,
-                       GenreStorage genreStorage) {
+                       GenreStorage genreStorage,
+                       EventService eventService) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.mpaService = mpaService;
@@ -49,6 +58,7 @@ public class FilmService {
         this.directorService = directorService;
         this.directorStorage = directorStorage;
         this.genreStorage = genreStorage;
+        this.eventService = eventService;
     }
 
     public Collection<Film> getAllFilms() {
@@ -140,12 +150,18 @@ public class FilmService {
         validateFilmAndUser(filmId, userId);
         filmStorage.addLike(filmId, userId);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
+
+        // записываем событие добавления лайка
+        eventService.addEvent(userId, EventType.LIKE, EventOperation.ADD, filmId);
     }
 
     public void unlikeFilm(Long filmId, Long userId) {
         validateFilmAndUser(filmId, userId);
         filmStorage.removeLike(filmId, userId);
         log.info("Пользователь {} удалил лайк у фильма {}", userId, filmId);
+
+        // записываем событие удаления лайка
+        eventService.addEvent(userId, EventType.LIKE, EventOperation.REMOVE, filmId);
     }
 
     public void deleteFilm(Long filmId) {
@@ -225,18 +241,21 @@ public class FilmService {
         return films;
     }
 
+    // Достаём id жанров из набора жанров
     private Set<Long> extractGenreIds(Set<Genre> genres) {
         return genres.stream()
                 .map(Genre::getId)
                 .collect(Collectors.toSet());
     }
 
+    // Достаём id режиссёров из набора режиссёров
     private Set<Long> extractDirectorIds(Set<Director> directors) {
         return directors.stream()
                 .map(Director::getId)
                 .collect(Collectors.toSet());
     }
 
+    // Сортируем жанры и режиссёров у фильма по id
     private void sortFilmCollections(Film film) {
         if (film.getGenres() != null) {
             film.setGenres(film.getGenres().stream()

@@ -5,11 +5,13 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.service.user.UserService;
 
-
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Контроллер для управления пользователями и дружбой.
@@ -22,6 +24,7 @@ import java.util.Collection;
 public class UserController {
 
     private final UserService userService;
+    private final EventService eventService;
 
     @GetMapping
     public Collection<User> listAllUsers() {
@@ -47,6 +50,13 @@ public class UserController {
             @PathVariable @Positive(message = "ID второго пользователя должен быть положительным") Long otherId) {
         log.info("Запрошены общие друзья пользователей {} и {}", id, otherId);
         return userService.getMutualFriends(id, otherId);
+    }
+
+    @GetMapping("/{id}/feed")
+    public List<Event> getUserFeed(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
+        log.info("Запрошена лента событий пользователя с id={}", id);
+        return eventService.getUserFeed(id);
     }
 
     @PostMapping
