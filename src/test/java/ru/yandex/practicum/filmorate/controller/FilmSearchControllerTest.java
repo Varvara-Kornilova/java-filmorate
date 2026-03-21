@@ -166,6 +166,144 @@ public class FilmSearchControllerTest {
                 filmController.searchFilms("test", "invalid"));
     }
 
+    @Test
+    public void getCommonFilms_ShouldReturnCommonFilms() {
+        // создаем пользователей
+        User user1 = createTestUser("common1@test.com", "common1");
+        User user2 = createTestUser("common2@test.com", "common2");
+
+        // создаем фильмы
+        Film film1 = createTestFilmWithDuration("Common Film 1", LocalDate.of(2023, 1, 1), 120);
+        Film film2 = createTestFilmWithDuration("Common Film 2", LocalDate.of(2023, 2, 1), 130);
+        Film film3 = createTestFilmWithDuration("Not Common Film", LocalDate.of(2023, 3, 1), 140);
+
+        // добавляем лайки
+        addLike(film1.getId(), user1.getId());
+        addLike(film1.getId(), user2.getId());
+        addLike(film2.getId(), user1.getId());
+        addLike(film2.getId(), user2.getId());
+        addLike(film3.getId(), user1.getId());
+
+        // получаем общие фильмы
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        // проверяем результат
+        assertFalse(commonFilms.isEmpty());
+        assertEquals(2, commonFilms.size());
+        assertThat(commonFilms).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Common Film 1", "Common Film 2");
+    }
+
+    @Test
+    public void getCommonFilms_ShouldReturnEmptyList_WhenNoCommonFilms() {
+        User user1 = createTestUser("noCommon1@test.com", "noCommon1");
+        User user2 = createTestUser("noCommon2@test.com", "noCommon2");
+
+        Film film1 = createTestFilmWithDuration("Film A", LocalDate.of(2023, 1, 1), 120);
+        Film film2 = createTestFilmWithDuration("Film B", LocalDate.of(2023, 2, 1), 130);
+
+        addLike(film1.getId(), user1.getId());
+        addLike(film2.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        assertTrue(commonFilms.isEmpty());
+    }
+
+    @Test
+    public void getCommonFilms_ShouldThrowException_WhenUserNotFound() {
+        User user = createTestUser("existing@test.com", "existing");
+
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getCommonFilms(999L, user.getId());
+        });
+    }
+
+    @Test
+    public void getCommonFilms_ShouldThrowException_WhenFriendNotFound() {
+        User user = createTestUser("existing2@test.com", "existing2");
+
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getCommonFilms(user.getId(), 999L);
+        });
+    }
+
+    @Test
+    public void getCommonFilms_ShouldReturnFilmsSortedByPopularity() {
+        // создаем пользователей
+        User user1 = createTestUser("sort1@test.com", "sort1");
+        User user2 = createTestUser("sort2@test.com", "sort2");
+        User user3 = createTestUser("sort3@test.com", "sort3");
+        User user4 = createTestUser("extra1@test.com", "extra1");
+        User user5 = createTestUser("extra2@test.com", "extra2");
+
+        // создаем фильмы
+        Film film1 = createTestFilmWithDuration("Most Popular", LocalDate.of(2023, 1, 1), 120);
+        Film film2 = createTestFilmWithDuration("Medium Popular", LocalDate.of(2023, 2, 1), 130);
+        Film film3 = createTestFilmWithDuration("Least Popular", LocalDate.of(2023, 3, 1), 140);
+
+        // film1: 5 лайков (оба пользователя + 3 дополнительных)
+        addLike(film1.getId(), user1.getId());
+        addLike(film1.getId(), user2.getId());
+        addLike(film1.getId(), user3.getId());
+        addLike(film1.getId(), user4.getId());
+        addLike(film1.getId(), user5.getId());
+
+        // film2: 3 лайка (оба пользователя + 1 дополнительный)
+        addLike(film2.getId(), user1.getId());
+        addLike(film2.getId(), user2.getId());
+        addLike(film2.getId(), user3.getId());
+
+        // film3: 2 лайка (только оба пользователя)
+        addLike(film3.getId(), user1.getId());
+        addLike(film3.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        // проверяем сортировку по популярности (по убыванию)
+        assertEquals(3, commonFilms.size());
+        List<Film> filmList = commonFilms.stream().toList();
+        assertEquals("Most Popular", filmList.get(0).getName());
+        assertEquals("Medium Popular", filmList.get(1).getName());
+        assertEquals("Least Popular", filmList.get(2).getName());
+    }
+
+    @Test
+    public void getCommonFilms_ShouldWorkWithGenresAndDirectors() {
+        // создаем пользователей
+        User user1 = createTestUser("userG@test.com", "userG");
+        User user2 = createTestUser("userH@test.com", "userH");
+
+        // создаем режиссера
+        Director director = createTestDirector("Test Director for Common Film");
+
+        // создаем фильм
+        Film film = createTestFilmWithDuration("Film With Genre And Director", LocalDate.of(2023, 1, 1), 120);
+
+        // добавляем жанр (предполагаем, что genre_id=1 существует в БД)
+        jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), 1L);
+
+        // добавляем режиссера
+        jdbcTemplate.update("INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)",
+                            film.getId(), director.getId());
+
+        // добавляем лайки
+        addLike(film.getId(), user1.getId());
+        addLike(film.getId(), user2.getId());
+
+        // получаем общие фильмы
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        // проверяем, что фильм найден и содержит жанры и режиссёров
+        assertFalse(commonFilms.isEmpty());
+        assertEquals(1, commonFilms.size());
+        Film foundFilm = commonFilms.iterator().next();
+
+        assertFalse(foundFilm.getGenres().isEmpty());
+        assertFalse(foundFilm.getDirectors().isEmpty());
+        assertEquals(director.getName(), foundFilm.getDirectors().iterator().next().getName());
+    }
+
     // создаем тестовый фильм с режиссером
     private Film createTestFilmWithDirector(String name, Long directorId) {
         long timestamp = System.nanoTime();
