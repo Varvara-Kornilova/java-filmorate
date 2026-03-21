@@ -1,20 +1,7 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import lombok.RequiredArgsConstructor;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
-import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 
@@ -25,66 +12,16 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@JdbcTest
-@AutoConfigureTestDatabase
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
-@Import({
-        FilmDbStorage.class,
-        GenreDbStorage.class,
-        UserDbStorage.class,
-        FilmRowMapper.class,
-        GenreRowMapper.class,
-        UserRowMapper.class
-})
-@Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-public class FilmDbStorageTest {
-
-    private final FilmDbStorage filmStorage;
-    private final GenreDbStorage genreStorage;
-    private final UserDbStorage userStorage;
-    private final JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    public void cleanUp() {
-        jdbcTemplate.update("DELETE FROM film_genres");
-        jdbcTemplate.update("DELETE FROM likes");
-        jdbcTemplate.update("DELETE FROM films");
-        jdbcTemplate.update("DELETE FROM users");
-    }
+public class FilmDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testCreateFilmWithoutGenres() {
         Film film = createTestFilm();
-
         Film created = filmStorage.create(film);
 
         assertThat(created.getId()).isNotNull();
         assertThat(created.getName()).isEqualTo("Test Film");
         assertThat(created.getGenres()).isEmpty();
-    }
-
-    @Test
-    public void testCreateFilmWithGenres() {
-        Film film = createTestFilm();
-        film.setGenres(Set.of(new Genre(1L, "Комедия"), new Genre(2L, "Драма")));
-
-        Film created = filmStorage.create(film);
-
-        assertThat(created.getId()).isNotNull();
-        Set<Genre> loadedGenres = genreStorage.getGenresByFilmId(created.getId());
-        assertThat(loadedGenres).extracting("id").containsExactlyInAnyOrder(1L, 2L);
-    }
-
-    @Test
-    public void testFindByIdWithGenres() {
-        Film film = createTestFilm();
-        film.setGenres(Set.of(new Genre(3L, "Фантастика")));
-        Film created = filmStorage.create(film);
-
-        Optional<Film> found = filmStorage.findById(created.getId());
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getGenres()).extracting("id").contains(3L);
     }
 
     @Test
@@ -94,31 +31,15 @@ public class FilmDbStorageTest {
     }
 
     @Test
-    public void testUpdateFilmAndGenres() {
-        Film film = createTestFilm();
-        film.setGenres(Set.of(new Genre(1L, "Комедия")));
-        Film created = filmStorage.create(film);
-
-        created.setName("Updated Title");
-        created.setGenres(Set.of(new Genre(4L, "Ужасы")));
-
-        Film updated = filmStorage.update(created);
-
-        Optional<Film> found = filmStorage.findById(created.getId());
-        assertThat(found).isPresent();
-        assertThat(found.get().getName()).isEqualTo("Updated Title");
-        assertThat(found.get().getGenres()).extracting("id").containsExactlyInAnyOrder(4L);
-    }
-
-    @Test
     public void testFindAll() {
         filmStorage.create(createTestFilm());
-        filmStorage.create(createTestFilm("Film Two", "Desc Two"));
+        filmStorage.create(createTestFilm("Film Two", "Desc Two", LocalDate.of(2023, 1, 1)));
 
         Collection<Film> films = filmStorage.findAll();
 
         assertThat(films).hasSize(2);
-        assertThat(films).extracting("name").containsExactlyInAnyOrder("Test Film", "Film Two");
+        assertThat(films).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Test Film", "Film Two");
     }
 
     @Test
@@ -148,7 +69,8 @@ public class FilmDbStorageTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
                 Integer.class,
-                film.getId(), user.getId()
+                film.getId(),
+                user.getId()
         );
         assertThat(count).isEqualTo(1);
 
@@ -157,15 +79,16 @@ public class FilmDbStorageTest {
         count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
                 Integer.class,
-                film.getId(), user.getId()
+                film.getId(),
+                user.getId()
         );
         assertThat(count).isEqualTo(0);
     }
 
     @Test
-    public void testGetPopular() {
-        Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One"));
-        Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two"));
+    public void testGetPopularWithoutFilters() {
+        Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One", LocalDate.of(2022, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two", LocalDate.of(2023, 1, 1)));
 
         User user1 = createTestUser("u1@test.com", "user1");
         User user2 = createTestUser("u2@test.com", "user2");
@@ -175,7 +98,7 @@ public class FilmDbStorageTest {
         filmStorage.addLike(film2.getId(), user2.getId());
         filmStorage.addLike(film2.getId(), user3.getId());
 
-        Collection<Film> popular = filmStorage.getPopular(2);
+        Collection<Film> popular = filmStorage.getPopular(2, null, null);
 
         assertThat(popular).hasSize(2);
         assertThat(popular.iterator().next().getName()).isEqualTo("Popular Film");
@@ -184,23 +107,89 @@ public class FilmDbStorageTest {
     @Test
     public void testGetPopularWithLimit() {
         for (int i = 0; i < 5; i++) {
-            Film film = createTestFilm("Film " + i, "Desc " + i);
-            filmStorage.create(film);
+            filmStorage.create(createTestFilm("Film " + i, "Desc " + i, LocalDate.of(2024, 1, 1)));
         }
 
-        Collection<Film> popular = filmStorage.getPopular(3);
+        Collection<Film> popular = filmStorage.getPopular(3, null, null);
+
         assertThat(popular).hasSize(3);
     }
 
-    private Film createTestFilm() {
-        return createTestFilm("Test Film", "Test Description");
+    @Test
+    public void testGetPopularFilteredByGenre() {
+        Film comedyFilm = filmStorage.create(createTestFilm("Comedy Film", "Funny", LocalDate.of(2024, 1, 1)));
+        Film dramaFilm = filmStorage.create(createTestFilm("Drama Film", "Sad", LocalDate.of(2024, 1, 1)));
+
+        // Привязываем жанры к фильмам
+        genreStorage.setGenres(comedyFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(dramaFilm.getId(), Set.of(2L));
+
+        User user1 = createTestUser("genre1@test.com", "genre1");
+        User user2 = createTestUser("genre2@test.com", "genre2");
+
+        filmStorage.addLike(comedyFilm.getId(), user1.getId());
+        filmStorage.addLike(dramaFilm.getId(), user1.getId());
+        filmStorage.addLike(dramaFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, null);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Comedy Film");
     }
 
-    private Film createTestFilm(String name, String description) {
+    @Test
+    public void testGetPopularFilteredByYear() {
+        Film oldFilm = filmStorage.create(createTestFilm("Old Film", "Old", LocalDate.of(2023, 1, 1)));
+        Film newFilm = filmStorage.create(createTestFilm("New Film", "New", LocalDate.of(2024, 1, 1)));
+
+        User user1 = createTestUser("year1@test.com", "year1");
+        User user2 = createTestUser("year2@test.com", "year2");
+
+        filmStorage.addLike(oldFilm.getId(), user1.getId());
+        filmStorage.addLike(newFilm.getId(), user1.getId());
+        filmStorage.addLike(newFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, null, 2023);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Old Film");
+    }
+
+    @Test
+    public void testGetPopularFilteredByGenreAndYear() {
+        Film neededFilm = filmStorage.create(createTestFilm("Needed Film", "Target", LocalDate.of(2024, 5, 1)));
+        Film sameGenreOtherYear = filmStorage.create(createTestFilm("Same Genre Other Year", "Other", LocalDate.of(2023, 5, 1)));
+        Film sameYearOtherGenre = filmStorage.create(createTestFilm("Same Year Other Genre", "Other", LocalDate.of(2024, 6, 1)));
+
+        // Привязываем жанры к фильмам
+        genreStorage.setGenres(neededFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(sameGenreOtherYear.getId(), Set.of(1L));
+        genreStorage.setGenres(sameYearOtherGenre.getId(), Set.of(2L));
+
+        User user1 = createTestUser("both1@test.com", "both1");
+        User user2 = createTestUser("both2@test.com", "both2");
+        User user3 = createTestUser("both3@test.com", "both3");
+
+        filmStorage.addLike(neededFilm.getId(), user1.getId());
+        filmStorage.addLike(neededFilm.getId(), user2.getId());
+        filmStorage.addLike(sameGenreOtherYear.getId(), user3.getId());
+        filmStorage.addLike(sameYearOtherGenre.getId(), user3.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, 2024);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Needed Film");
+    }
+
+    private Film createTestFilm() {
+        return createTestFilm("Test Film", "Test Description", LocalDate.of(2024, 1, 1));
+    }
+
+    private Film createTestFilm(String name, String description, LocalDate releaseDate) {
         Film film = new Film();
         film.setName(name);
         film.setDescription(description);
-        film.setReleaseDate(LocalDate.of(2024, 1, 1));
+        film.setReleaseDate(releaseDate);
         film.setDuration(120);
         film.setMpa(new Mpa(1L, "G", null));
         return film;

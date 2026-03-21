@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 
@@ -36,9 +37,42 @@ public class FilmController {
 
     @GetMapping("/popular")
     public Collection<Film> fetchPopularFilms(
-            @RequestParam(defaultValue = "10") @Positive(message = "Количество должно быть положительным") Integer count) {
-        log.info("Запрошены популярные фильмы (limit={})", count);
-        return filmService.getMostPopularFilms(count);
+            @RequestParam(defaultValue = "10") @Positive(message = "Количество должно быть положительным") Integer count,
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) Integer year) {
+
+        log.info("Запрошены популярные фильмы (limit={}, genreId={}, year={})", count, genreId, year);
+
+        return filmService.getMostPopularFilms(count, genreId, year);
+    }
+
+    @GetMapping("/search")
+    public Collection<Film> searchFilms(
+            @RequestParam(required = true) String query,
+            @RequestParam(required = true) String by) {
+
+        log.info("Поиск фильмов: query={}, by={}", query, by);
+
+        if (by != null && !by.matches("(title|director)(,(title|director))?")) {
+            throw new ValidationException(
+                    "Параметр 'by' должен принимать значения: title, director или title,director");
+        }
+
+        return filmService.searchFilms(query, by);
+    }
+
+    @GetMapping("/director/{directorId}")
+    public Collection<Film> getFilmsByDirector(
+            @PathVariable @Positive(message = "ID режиссёра должен быть положительным") Long directorId,
+            @RequestParam(required = false) String sortBy) {
+
+        log.info("Запрошены фильмы режиссёра {} с сортировкой {}", directorId, sortBy);
+
+        if (sortBy != null && !sortBy.matches("year|likes")) {
+            throw new ValidationException("Параметр sortBy должен быть 'year' или 'likes'");
+        }
+
+        return filmService.getFilmsByDirector(directorId, sortBy);
     }
 
     @PostMapping
