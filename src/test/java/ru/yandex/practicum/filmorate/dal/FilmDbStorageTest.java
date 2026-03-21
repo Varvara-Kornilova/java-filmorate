@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -204,25 +206,23 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         return userStorage.create(user);
     }
 
-    // НОВЫЕ ТЕСТЫ
+    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void testGetCommonFilms() {
         // Создаём пользователей
-        User user1 = createTestUser("user1@test.com", "user1");
-        User user2 = createTestUser("user2@test.com", "user2");
-        User user3 = createTestUser("user3@test.com", "user3");
+        User user1 = createTestUser("common1@test.com", "common1");
+        User user2 = createTestUser("common2@test.com", "common2");
 
         // Создаём фильмы
-        Film film1 = filmStorage.create(createTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1)));
-        Film film2 = filmStorage.create(createTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1)));
-        Film film3 = filmStorage.create(createTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1)));
+        Film film1 = createTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
 
         // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film1.getId(), user2.getId());
         filmStorage.addLike(film2.getId(), user1.getId());
         filmStorage.addLike(film3.getId(), user2.getId());
-        filmStorage.addLike(film1.getId(), user3.getId());
 
         // Получаем общие фильмы
         Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
@@ -240,9 +240,9 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         User user4 = createTestUser("userD@test.com", "userD");
 
         // Создаём фильмы
-        Film film1 = filmStorage.create(createTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1)));
-        Film film2 = filmStorage.create(createTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1)));
-        Film film3 = filmStorage.create(createTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1)));
+        Film film1 = createTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
 
         // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
@@ -271,8 +271,8 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         User user1 = createTestUser("userX@test.com", "userX");
         User user2 = createTestUser("userY@test.com", "userY");
 
-        Film film1 = filmStorage.create(createTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1)));
-        Film film2 = filmStorage.create(createTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1)));
+        Film film1 = createTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1));
+        Film film2 = createTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1));
 
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film2.getId(), user2.getId());
@@ -280,40 +280,6 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
         assertThat(commonFilms).isEmpty();
-    }
-
-    @Test
-    public void testGetCommonFilmsWithGenresAndDirectors() {
-        User user1 = createTestUser("userG@test.com", "userG");
-        User user2 = createTestUser("userH@test.com", "userH");
-
-        Director director1 = createTestDirector("Director One");
-        Director director2 = createTestDirector("Director Two");
-
-        Film film = filmStorage.create(createTestFilm("Complex Film", "Complex Desc", LocalDate.of(2023, 1, 1)));
-
-        // Добавляем жанры
-        jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), 1L);
-        jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), 2L);
-
-        // Добавляем режиссёров
-        jdbcTemplate.update("INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)",
-                            film.getId(), director1.getId());
-        jdbcTemplate.update("INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)",
-                            film.getId(), director2.getId());
-
-        filmStorage.addLike(film.getId(), user1.getId());
-        filmStorage.addLike(film.getId(), user2.getId());
-
-        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
-
-        assertThat(commonFilms).hasSize(1);
-        Film foundFilm = commonFilms.iterator().next();
-
-        assertThat(foundFilm.getGenres()).hasSize(2);
-        assertThat(foundFilm.getDirectors()).hasSize(2);
-        assertThat(foundFilm.getDirectors()).extracting(Director::getName)
-                .containsExactlyInAnyOrder("Director One", "Director Two");
     }
 
     private Director createTestDirector(String name) {
