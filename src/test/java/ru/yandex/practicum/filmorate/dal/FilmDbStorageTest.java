@@ -203,4 +203,150 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         user.setBirthday(LocalDate.of(1990, 1, 1));
         return userStorage.create(user);
     }
+
+    // НОВЫЕ ТЕСТЫ
+    @Test
+    public void testGetCommonFilms() {
+        // Создаём пользователей
+        User user1 = createTestUser("user1@test.com", "user1");
+        User user2 = createTestUser("user2@test.com", "user2");
+        User user3 = createTestUser("user3@test.com", "user3");
+
+        // Создаём фильмы
+        Film film1 = filmStorage.create(createTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1)));
+        Film film3 = filmStorage.create(createTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1)));
+
+        // Добавляем лайки
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user1.getId());
+        filmStorage.addLike(film3.getId(), user2.getId());
+        filmStorage.addLike(film1.getId(), user3.getId());
+
+        // Получаем общие фильмы
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
+
+        assertThat(commonFilms).hasSize(1);
+        assertThat(commonFilms.iterator().next().getName()).isEqualTo("Film 1");
+    }
+
+    @Test
+    public void testGetCommonFilmsSortedByPopularity() {
+        // Создаём пользователей
+        User user1 = createTestUser("userA@test.com", "userA");
+        User user2 = createTestUser("userB@test.com", "userB");
+        User user3 = createTestUser("userC@test.com", "userC");
+        User user4 = createTestUser("userD@test.com", "userD");
+
+        // Создаём фильмы
+        Film film1 = filmStorage.create(createTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1)));
+        Film film3 = filmStorage.create(createTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1)));
+
+        // Добавляем лайки
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film1.getId(), user3.getId());
+        filmStorage.addLike(film1.getId(), user4.getId());
+
+        filmStorage.addLike(film2.getId(), user1.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user3.getId());
+
+        filmStorage.addLike(film3.getId(), user1.getId());
+        filmStorage.addLike(film3.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
+
+        assertThat(commonFilms).hasSize(3);
+        List<Film> filmList = new ArrayList<>(commonFilms);
+        assertThat(filmList.get(0).getName()).isEqualTo("Popular Film");
+        assertThat(filmList.get(1).getName()).isEqualTo("Less Popular Film");
+        assertThat(filmList.get(2).getName()).isEqualTo("Least Popular Film");
+    }
+
+    @Test
+    public void testGetCommonFilmsEmptyResult() {
+        User user1 = createTestUser("userX@test.com", "userX");
+        User user2 = createTestUser("userY@test.com", "userY");
+
+        Film film1 = filmStorage.create(createTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1)));
+
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
+
+        assertThat(commonFilms).isEmpty();
+    }
+
+    @Test
+    public void testGetCommonFilmsWithGenresAndDirectors() {
+        User user1 = createTestUser("userG@test.com", "userG");
+        User user2 = createTestUser("userH@test.com", "userH");
+
+        Director director1 = createTestDirector("Director One");
+        Director director2 = createTestDirector("Director Two");
+
+        Film film = filmStorage.create(createTestFilm("Complex Film", "Complex Desc", LocalDate.of(2023, 1, 1)));
+
+        // Добавляем жанры
+        jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), 1L);
+        jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), 2L);
+
+        // Добавляем режиссёров
+        jdbcTemplate.update("INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)",
+                            film.getId(), director1.getId());
+        jdbcTemplate.update("INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)",
+                            film.getId(), director2.getId());
+
+        filmStorage.addLike(film.getId(), user1.getId());
+        filmStorage.addLike(film.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
+
+        assertThat(commonFilms).hasSize(1);
+        Film foundFilm = commonFilms.iterator().next();
+
+        assertThat(foundFilm.getGenres()).hasSize(2);
+        assertThat(foundFilm.getDirectors()).hasSize(2);
+        assertThat(foundFilm.getDirectors()).extracting(Director::getName)
+                .containsExactlyInAnyOrder("Director One", "Director Two");
+    }
+
+    private Director createTestDirector(String name) {
+        String sql = "INSERT INTO directors (name) VALUES (?)";
+        GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"director_id"});
+            ps.setString(1, name);
+            return ps;
+        }, keyHolder);
+
+        Director director = new Director();
+        director.setId(keyHolder.getKey().longValue());
+        director.setName(name);
+        return director;
+    }
+
+    private Film createTestFilm(String name, String description, LocalDate releaseDate) {
+        Film film = new Film();
+        film.setName(name);
+        film.setDescription(description);
+        film.setReleaseDate(releaseDate);
+        film.setDuration(120);
+        film.setMpa(new Mpa(1L, "G", null));
+        return film;
+    }
+
+    private User createTestUser(String email, String login) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName(login);
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return userStorage.create(user);
+    }
 }
