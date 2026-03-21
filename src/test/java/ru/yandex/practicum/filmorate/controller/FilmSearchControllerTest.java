@@ -264,6 +264,16 @@ public class FilmSearchControllerTest {
         return directorController.createDirector(director);
     }
 
+    // создаем тестового пользователя
+    private User createTestUser(String email, String login) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName(login);
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return userStorage.create(user);
+    }
+
     // очищаем таблицы перед тестами
     private void clearTestData() {
         jdbcTemplate.update("DELETE FROM events");
