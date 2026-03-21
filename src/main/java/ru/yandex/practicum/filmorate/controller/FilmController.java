@@ -46,6 +46,21 @@ public class FilmController {
         return filmService.getMostPopularFilms(count, genreId, year);
     }
 
+    @GetMapping("/search")
+    public Collection<Film> searchFilms(
+            @RequestParam(required = true) String query,
+            @RequestParam(required = true) String by) {
+
+        log.info("Поиск фильмов: query={}, by={}", query, by);
+
+        if (by != null && !by.matches("(title|director)(,(title|director))?")) {
+            throw new ValidationException(
+                    "Параметр 'by' должен принимать значения: title, director или title,director");
+        }
+
+        return filmService.searchFilms(query, by);
+    }
+
     @GetMapping("/director/{directorId}")
     public Collection<Film> getFilmsByDirector(
             @PathVariable @Positive(message = "ID режиссёра должен быть положительным") Long directorId,

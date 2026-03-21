@@ -27,4 +27,6 @@ public interface FilmStorage {
     boolean contains(Long id);
 
     Collection<Film> findByDirectorId(Long directorId, String sortBy);
+
+    Collection<Film> search(String query, String by);
 }
