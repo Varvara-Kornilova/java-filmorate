@@ -206,7 +206,7 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         return userStorage.create(user);
     }
 
-    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
+        // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void testGetCommonFilms() {
         // Создаём пользователей
@@ -295,24 +295,5 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         director.setId(keyHolder.getKey().longValue());
         director.setName(name);
         return director;
-    }
-
-    private Film createTestFilm(String name, String description, LocalDate releaseDate) {
-        Film film = new Film();
-        film.setName(name);
-        film.setDescription(description);
-        film.setReleaseDate(releaseDate);
-        film.setDuration(120);
-        film.setMpa(new Mpa(1L, "G", null));
-        return film;
-    }
-
-    private User createTestUser(String email, String login) {
-        User user = new User();
-        user.setEmail(email);
-        user.setLogin(login);
-        user.setName(login);
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-        return userStorage.create(user);
     }
 }
