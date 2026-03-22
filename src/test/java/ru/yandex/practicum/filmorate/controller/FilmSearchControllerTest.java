@@ -34,6 +34,7 @@ import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -88,6 +89,8 @@ public class FilmSearchControllerTest {
         DirectorService directorService = new DirectorService(directorStorage);
         EventDbStorage eventStorage = new EventDbStorage(jdbcTemplate, eventRowMapper);
         EventService eventService = new EventService(eventStorage, userStorage);
+        LikeDbStorage likeStorage = new LikeDbStorage(jdbcTemplate);
+        RecommendationService recommendationService = new RecommendationService(likeStorage, filmStorage);
 
         FilmService filmService = new FilmService(
                 filmStorage,
@@ -97,7 +100,8 @@ public class FilmSearchControllerTest {
                 directorService,
                 directorStorage,
                 genreStorage,
-                eventService
+                eventService,
+                recommendationService
         );
 
         filmController = new FilmController(filmService);
