@@ -70,7 +70,7 @@ public class FilmService {
             throw new NotFoundException(
                     String.format("Пользователь с идентификатором %d не найден", userId));
         }
-    
+
         Collection<Film> recommendations = recommendationService.getRecommendations(userId);
 
         if (!recommendations.isEmpty()) {
