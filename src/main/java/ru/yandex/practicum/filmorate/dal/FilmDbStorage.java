@@ -123,7 +123,8 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                 WHERE l.user_id != ?
                   AND l.film_id IN (SELECT film_id FROM user_likes)
                 GROUP BY l.user_id
-                ORDER BY common_likes DESC, l.user_id
+                HAVING COUNT(*) > 0
+                ORDER BY common_likes DESC
                 LIMIT 1
             ),
             recommendations_raw AS (
@@ -353,6 +354,7 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     @Override
     public Collection<Film> getRecommendations(Long userId) {
+        log.debug("Поиск рекомендаций для пользователя {}", userId);
         List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
