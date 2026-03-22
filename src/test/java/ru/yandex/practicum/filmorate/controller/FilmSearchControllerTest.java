@@ -168,29 +168,24 @@ public class FilmSearchControllerTest {
                 filmController.searchFilms("test", "invalid"));
     }
 
-    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void getCommonFilms_ShouldReturnCommonFilms() {
-        // создаем пользователей
+
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
-        // создаем фильмы
         Film film1 = createTestFilm("Common Film 1");
         Film film2 = createTestFilm("Common Film 2");
         Film film3 = createTestFilm("Not Common Film");
 
-        // добавляем лайки
         filmController.applyLike(film1.getId(), user1.getId());
         filmController.applyLike(film1.getId(), user2.getId());
         filmController.applyLike(film2.getId(), user1.getId());
         filmController.applyLike(film2.getId(), user2.getId());
         filmController.applyLike(film3.getId(), user1.getId());
 
-        // получаем общие фильмы
         Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
 
-        // проверяем результат
         assertFalse(commonFilms.isEmpty());
         assertEquals(2, commonFilms.size());
     }
