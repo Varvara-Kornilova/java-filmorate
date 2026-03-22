@@ -16,7 +16,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
@@ -344,11 +346,16 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     @Override
     public Collection<Film> getRecommendations(Long userId) {
-        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId, userId);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        loadLikesForFilms(films);
-        return films;
+        try {
+            List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId, userId);
+            loadGenresForFilms(films);
+            loadDirectorsForFilms(films);
+            loadLikesForFilms(films);
+            return films;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Ошибка при получении рекомендаций: " + e.getMessage());
+        }
     }
 
     private void loadGenres(Film film) {
