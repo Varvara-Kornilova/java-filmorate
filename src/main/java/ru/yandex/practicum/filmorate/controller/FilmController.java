@@ -83,6 +83,13 @@ public class FilmController {
         return filmService.getCommonFilms(userId, friendId);
     }
 
+    @GetMapping("/users/{id}/recommendations")
+    public Collection<Film> getRecommendations(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
+        log.info("Запрошены рекомендации для пользователя {}", id);
+        return filmService.getRecommendations(id);
+    }
+
     @PostMapping
     public Film registerFilm(@Valid @RequestBody Film film) {
         log.info("Создание нового фильма: \"{}\"", film.getName());
