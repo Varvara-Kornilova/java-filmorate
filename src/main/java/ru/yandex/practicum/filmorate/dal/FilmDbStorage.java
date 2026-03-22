@@ -16,7 +16,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
