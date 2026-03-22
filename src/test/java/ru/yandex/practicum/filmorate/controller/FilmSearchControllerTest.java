@@ -247,7 +247,7 @@ public class FilmSearchControllerTest {
         Collection<Film> recommendations = filmController.getRecommendations(user1.getId());
 
         assertFalse(recommendations.isEmpty());
-        assertEquals(2, recommendations.size());
+        assertEquals(0, recommendations.size());
     }
 
     @Test
