@@ -21,7 +21,6 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -73,14 +72,13 @@ public class FilmService {
         }
     
         Collection<Film> recommendations = recommendationService.getRecommendations(userId);
-    
-    // Даже если список пустой, сортировка не нужна, но можно оставить
+
         if (!recommendations.isEmpty()) {
             recommendations.forEach(this::sortFilmCollections);
         }
-    
+
         log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
-    
+
         return recommendations;
     }
 
