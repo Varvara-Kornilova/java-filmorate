@@ -18,6 +18,7 @@ import ru.yandex.practicum.filmorate.dal.mappers.*;
         UserDbStorage.class,
         FriendshipDbStorage.class,
         MpaDbStorage.class,
+        LikeDbStorage.class,
         FilmRowMapper.class,
         GenreRowMapper.class,
         DirectorRowMapper.class,
@@ -49,9 +50,12 @@ public abstract class BaseJdbcTest {
     @Autowired
     protected MpaDbStorage mpaStorage;
 
+    @Autowired
+    protected LikeDbStorage likeStorage;
+
     @BeforeEach
     void cleanUp() {
-        // Порядок важен из-за внешних ключей!
+
         jdbcTemplate.update("DELETE FROM film_directors");
         jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM likes");
