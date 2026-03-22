@@ -212,25 +212,21 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         return userStorage.create(user);
     }
 
-    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void testGetCommonFilms() {
-        // Создаём пользователей
+
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
-        // Создаём фильмы (сохраняем в БД)
         Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
         Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
         Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
 
-        // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film1.getId(), user2.getId());
         filmStorage.addLike(film2.getId(), user1.getId());
         filmStorage.addLike(film3.getId(), user2.getId());
 
-        // Получаем общие фильмы
         Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
         assertThat(commonFilms).hasSize(1);
@@ -239,18 +235,16 @@ public class FilmDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testGetCommonFilmsSortedByPopularity() {
-        // Создаём пользователей
+
         User user1 = createTestUser("userA@test.com", "userA");
         User user2 = createTestUser("userB@test.com", "userB");
         User user3 = createTestUser("userC@test.com", "userC");
         User user4 = createTestUser("userD@test.com", "userD");
 
-        // Создаём фильмы (сохраняем в БД)
         Film film1 = createAndSaveTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
         Film film2 = createAndSaveTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
         Film film3 = createAndSaveTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
 
-        // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film1.getId(), user2.getId());
         filmStorage.addLike(film1.getId(), user3.getId());
@@ -286,5 +280,65 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
         assertThat(commonFilms).isEmpty();
+    }
+
+    @Test
+    public void testGetRecommendations() {
+
+        User user1 = createTestUser("rec1@test.com", "rec1");
+        User user2 = createTestUser("rec2@test.com", "rec2");
+        User user3 = createTestUser("rec3@test.com", "rec3");
+
+        Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
+        Film film4 = createAndSaveTestFilm("Film 4", "Desc 4", LocalDate.of(2023, 4, 1));
+
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film2.getId(), user1.getId());
+
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+        filmStorage.addLike(film3.getId(), user2.getId());
+
+        filmStorage.addLike(film1.getId(), user3.getId());
+
+        Collection<Film> recommendations = filmStorage.getRecommendations(user1.getId());
+
+        assertThat(recommendations).hasSize(1);
+        assertThat(recommendations.iterator().next().getName()).isEqualTo("Film 3");
+    }
+
+    @Test
+    public void testGetRecommendations_NoSimilarUser() {
+        User user1 = createTestUser("recSingle1@test.com", "recSingle1");
+        User user2 = createTestUser("recSingle2@test.com", "recSingle2");
+
+        Film film1 = createAndSaveTestFilm("Film A", "Desc A", LocalDate.of(2023, 1, 1));
+
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film1.getId(), user2.getId());
+
+        Collection<Film> recommendations = filmStorage.getRecommendations(user1.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void testGetRecommendations_NoUnwatchedFilms() {
+        User user1 = createTestUser("recAll@test.com", "recAll");
+        User user2 = createTestUser("recAll2@test.com", "recAll2");
+
+        Film film1 = createAndSaveTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1));
+
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film2.getId(), user1.getId());
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+
+        Collection<Film> recommendations = filmStorage.getRecommendations(user1.getId());
+
+        assertThat(recommendations).isEmpty();
     }
 }
