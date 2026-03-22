@@ -95,7 +95,7 @@ public class RecommendationService {
         return new SlopeOneMatrices(diff, freq);
     }
 
-    private Map<Long, Double> predictRatings(Long userId, 
+    private Map<Long, Double> predictRatings(Long userId,
                                               Map<Long, Set<Long>> userLikes,
                                               SlopeOneMatrices matrices) {
         Map<Long, Double> predictions = new HashMap<>();
