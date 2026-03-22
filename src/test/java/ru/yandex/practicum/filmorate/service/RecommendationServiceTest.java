@@ -43,11 +43,6 @@ public class RecommendationServiceTest {
     private RecommendationService recommendationService;
     private UserStorage userStorage;
     private FilmStorage filmStorage;
-    private User user1;
-    private User user2;
-    private Film film1;
-    private Film film2;
-    private Film film3;
 
     @BeforeEach
     public void setUp() {
@@ -58,6 +53,9 @@ public class RecommendationServiceTest {
         jdbcTemplate.update("DELETE FROM friendship");
         jdbcTemplate.update("DELETE FROM films");
         jdbcTemplate.update("DELETE FROM users");
+
+        jdbcTemplate.update("ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1");
+        jdbcTemplate.update("ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1");
 
         userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
         MpaStorage mpaStorage = new MpaDbStorage(jdbcTemplate, mpaRowMapper);
@@ -94,7 +92,10 @@ public class RecommendationServiceTest {
 
     @Test
     public void getRecommendations_ShouldReturnEmptyForUserWithNoLikes() {
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        User userNoLikes = createTestUser("noLikes@test.com", "noLikes");
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(userNoLikes.getId());
 
         assertThat(recommendations).isEmpty();
     }
