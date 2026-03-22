@@ -30,6 +30,7 @@ public interface FilmStorage {
 
     Collection<Film> search(String query, String by);
 
-    // Метод для общих фильмов
     Collection<Film> getCommonFilms(Long userId, Long friendId);
+
+    Collection<Film> getRecommendations(Long userId);
 }
