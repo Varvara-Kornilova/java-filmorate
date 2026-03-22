@@ -67,13 +67,6 @@ public class RecommendationServiceTest {
         LikeDbStorage likeStorage = new LikeDbStorage(jdbcTemplate);
 
         recommendationService = new RecommendationService(likeStorage, filmStorage);
-
-        user1 = createTestUser("rec1@test.com", "rec1");
-        user2 = createTestUser("rec2@test.com", "rec2");
-
-        film1 = createTestFilm("Film 1");
-        film2 = createTestFilm("Film 2");
-        film3 = createTestFilm("Film 3");
     }
 
     @Test
