@@ -22,6 +22,7 @@ import ru.yandex.practicum.filmorate.service.recommendation.RecommendationServic
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
