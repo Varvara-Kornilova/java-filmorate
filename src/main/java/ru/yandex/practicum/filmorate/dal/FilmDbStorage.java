@@ -16,9 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
@@ -114,34 +112,24 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
             """;
 
     private static final String GET_RECOMMENDATIONS = """
-            WITH user_likes AS (
-                -- Фильмы, которые лайкнул текущий пользователь
-                SELECT film_id FROM likes WHERE user_id = ?
-            ),
-            similar_users AS (
-                -- Находим пользователя с максимальным пересечением лайков
-                SELECT l.user_id, COUNT(*) as common_likes
-                FROM likes l
-                WHERE l.user_id != ?
-                  AND l.film_id IN (SELECT film_id FROM user_likes)
-                GROUP BY l.user_id
-                HAVING COUNT(*) > 0
-                ORDER BY common_likes DESC
-                LIMIT 1
-            ),
-            recommendations_raw AS (
-                -- Получаем фильмы, которые лайкнул похожий пользователь,
-                -- но текущий пользователь ещё не лайкнул
-                SELECT l.film_id
-                FROM likes l
-                WHERE l.user_id = (SELECT user_id FROM similar_users)
-                  AND l.film_id NOT IN (SELECT film_id FROM user_likes)
-            )
             SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
                    f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
             FROM films f
             LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            WHERE f.film_id IN (SELECT film_id FROM recommendations_raw)
+            WHERE f.film_id IN (
+                SELECT l.film_id
+                FROM likes l
+                WHERE l.user_id IN (
+                    SELECT l2.user_id
+                    FROM likes l2
+                    WHERE l2.user_id != ?
+                      AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
+                    GROUP BY l2.user_id
+                    ORDER BY COUNT(*) DESC
+                    LIMIT 1
+                )
+                AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)
+            )
             ORDER BY f.film_id
             """;
 
@@ -356,8 +344,7 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     @Override
     public Collection<Film> getRecommendations(Long userId) {
-        log.debug("Поиск рекомендаций для пользователя {}", userId);
-        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId);
+        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId, userId);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
         loadLikesForFilms(films);
