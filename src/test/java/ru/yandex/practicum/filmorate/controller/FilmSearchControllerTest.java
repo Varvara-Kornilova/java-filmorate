@@ -168,29 +168,24 @@ public class FilmSearchControllerTest {
                 filmController.searchFilms("test", "invalid"));
     }
 
-    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void getCommonFilms_ShouldReturnCommonFilms() {
-        // создаем пользователей
+
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
-        // создаем фильмы
         Film film1 = createTestFilm("Common Film 1");
         Film film2 = createTestFilm("Common Film 2");
         Film film3 = createTestFilm("Not Common Film");
 
-        // добавляем лайки
         filmController.applyLike(film1.getId(), user1.getId());
         filmController.applyLike(film1.getId(), user2.getId());
         filmController.applyLike(film2.getId(), user1.getId());
         filmController.applyLike(film2.getId(), user2.getId());
         filmController.applyLike(film3.getId(), user1.getId());
 
-        // получаем общие фильмы
         Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
 
-        // проверяем результат
         assertFalse(commonFilms.isEmpty());
         assertEquals(2, commonFilms.size());
     }
@@ -226,6 +221,46 @@ public class FilmSearchControllerTest {
 
         assertThrows(NotFoundException.class, () -> {
             filmController.getCommonFilms(user.getId(), 999L);
+        });
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnRecommendedFilms() {
+
+        User user1 = createTestUser("recUser1@test.com", "recUser1");
+        User user2 = createTestUser("recUser2@test.com", "recUser2");
+
+        Film film1 = createTestFilm("Film 1");
+        Film film2 = createTestFilm("Film 2");
+        Film film3 = createTestFilm("Film 3");
+
+        filmController.applyLike(film1.getId(), user1.getId());
+        filmController.applyLike(film2.getId(), user1.getId());
+
+        filmController.applyLike(film1.getId(), user2.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+        filmController.applyLike(film3.getId(), user2.getId());
+
+        Collection<Film> recommendations = filmController.getRecommendations(user1.getId());
+
+        assertFalse(recommendations.isEmpty());
+        assertEquals(1, recommendations.size());
+        assertEquals(film3.getName(), recommendations.iterator().next().getName());
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnEmptyList_WhenNoRecommendations() {
+        User user = createTestUser("emptyRec@test.com", "emptyRec");
+
+        Collection<Film> recommendations = filmController.getRecommendations(user.getId());
+
+        assertTrue(recommendations.isEmpty());
+    }
+
+    @Test
+    public void getRecommendations_ShouldThrowException_WhenUserNotFound() {
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getRecommendations(999L);
         });
     }
 
