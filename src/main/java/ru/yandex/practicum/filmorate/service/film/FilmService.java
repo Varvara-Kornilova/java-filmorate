@@ -67,26 +67,21 @@ public class FilmService {
     }
 
     public Collection<Film> getRecommendations(Long userId) {
-        try {
-            if (!userStorage.findById(userId).isPresent()) {
-                throw new NotFoundException(
-                        String.format("Пользователь с идентификатором %d не найден", userId));
-            }
-
-            Collection<Film> recommendations = recommendationService.getRecommendations(userId);
-
-            recommendations.forEach(this::sortFilmCollections);
-
-            log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
-
-            return recommendations;
-
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Ошибка при получении рекомендаций: {}", e.getMessage(), e);
-            return Collections.emptyList();
+        if (!userStorage.findById(userId).isPresent()) {
+            throw new NotFoundException(
+                    String.format("Пользователь с идентификатором %d не найден", userId));
         }
+    
+        Collection<Film> recommendations = recommendationService.getRecommendations(userId);
+    
+    // Даже если список пустой, сортировка не нужна, но можно оставить
+        if (!recommendations.isEmpty()) {
+            recommendations.forEach(this::sortFilmCollections);
+        }
+    
+        log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
+    
+        return recommendations;
     }
 
     public Collection<Film> getAllFilms() {
