@@ -341,4 +341,49 @@ public class FilmDbStorageTest extends BaseJdbcTest {
 
         assertThat(recommendations).isEmpty();
     }
+
+    //Отладочный
+    @Test
+    public void testGetRecommendations_Debug() {
+    // Создаём пользователей
+        User user1 = createTestUser("rec1@test.com", "rec1");
+        User user2 = createTestUser("rec2@test.com", "rec2");
+
+    // Создаём фильмы
+        Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
+
+    // user1 лайкнул film1 и film2
+        filmStorage.addLike(film1.getId(), user1.getId());
+        filmStorage.addLike(film2.getId(), user1.getId());
+
+    // user2 лайкнул film1, film2 и film3
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+        filmStorage.addLike(film3.getId(), user2.getId());
+
+    // Проверяем напрямую через SQL, кто является похожим пользователем
+        List<Long> similarUsers = jdbcTemplate.queryForList(
+            "SELECT l2.user_id FROM likes l2 " +
+            "WHERE l2.user_id != ? AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?) " +
+            "GROUP BY l2.user_id ORDER BY COUNT(*) DESC LIMIT 1",
+            Long.class, user1.getId(), user1.getId());
+
+        System.out.println("Similar user: " + similarUsers);
+
+    // Проверяем, какие фильмы рекомендованы
+        List<Long> recommendedFilms = jdbcTemplate.queryForList(
+            "SELECT l.film_id FROM likes l " +
+            "WHERE l.user_id = ? AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)",
+            Long.class, similarUsers.get(0), user1.getId());
+
+        System.out.println("Recommended films: " + recommendedFilms);
+
+        Collection<Film> recommendations = filmStorage.getRecommendations(user1.getId());
+
+        System.out.println("Final recommendations size: " + recommendations.size());
+
+        assertThat(recommendations).hasSize(1);
+    }
 }
