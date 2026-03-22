@@ -16,9 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Repository
 public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
@@ -111,30 +109,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                      f.mpa_rating_id, mr.name, mr.description
             HAVING COUNT(DISTINCT l.user_id) = 2
             ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String GET_RECOMMENDATIONS = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            WHERE f.film_id IN (
-                SELECT l.film_id
-                FROM likes l
-                WHERE l.user_id = (
-                    SELECT user_id FROM (
-                        SELECT l2.user_id, COUNT(*) as cnt
-                        FROM likes l2
-                        WHERE l2.user_id != ?
-                          AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
-                        GROUP BY l2.user_id
-                        ORDER BY cnt DESC
-                        LIMIT 1
-                    )
-                )
-                AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)
-            )
-            ORDER BY f.film_id
             """;
 
     private static final String INSERT = """
@@ -340,49 +314,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
     @Override
     public Collection<Film> getCommonFilms(Long userId, Long friendId) {
         List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        loadLikesForFilms(films);
-        return films;
-    }
-
-    @Override
-    public Collection<Film> getRecommendations(Long userId) {
-
-        String similarUserSql = """
-            SELECT user_id FROM (
-                SELECT l2.user_id, COUNT(*) as common_likes
-                FROM likes l2
-                WHERE l2.user_id != ?
-                  AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
-                GROUP BY l2.user_id
-                ORDER BY common_likes DESC
-                LIMIT 1
-            )
-            """;
-
-        List<Long> similarUsers = jdbcTemplate.queryForList(similarUserSql, Long.class, userId, userId);
-
-        if (similarUsers.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        Long similarUserId = similarUsers.get(0);
-
-        String recommendationsSql = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            WHERE f.film_id IN (
-                SELECT film_id FROM likes WHERE user_id = ?
-                EXCEPT
-                SELECT film_id FROM likes WHERE user_id = ?
-            )
-            ORDER BY f.film_id
-            """;
-
-        List<Film> films = jdbcTemplate.query(recommendationsSql, rowMapper, similarUserId, userId);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
         loadLikesForFilms(films);
