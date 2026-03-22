@@ -121,14 +121,16 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
             WHERE f.film_id IN (
                 SELECT l.film_id
                 FROM likes l
-                WHERE l.user_id IN (
-                    SELECT l2.user_id
-                    FROM likes l2
-                    WHERE l2.user_id != ?
-                      AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
-                    GROUP BY l2.user_id
-                    ORDER BY COUNT(*) DESC
-                    LIMIT 1
+                WHERE l.user_id = (
+                    SELECT user_id FROM (
+                        SELECT l2.user_id, COUNT(*) as cnt
+                        FROM likes l2
+                        WHERE l2.user_id != ?
+                          AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
+                        GROUP BY l2.user_id
+                        ORDER BY cnt DESC
+                        LIMIT 1
+                    )
                 )
                 AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)
             )
@@ -346,16 +348,45 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     @Override
     public Collection<Film> getRecommendations(Long userId) {
-        try {
-            List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId, userId);
-            loadGenresForFilms(films);
-            loadDirectorsForFilms(films);
-            loadLikesForFilms(films);
-            return films;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при получении рекомендаций: " + e.getMessage());
+
+        String similarUserSql = """
+            SELECT user_id FROM (
+                SELECT l2.user_id, COUNT(*) as common_likes
+                FROM likes l2
+                WHERE l2.user_id != ?
+                  AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
+                GROUP BY l2.user_id
+                ORDER BY common_likes DESC
+                LIMIT 1
+            )
+            """;
+
+        List<Long> similarUsers = jdbcTemplate.queryForList(similarUserSql, Long.class, userId, userId);
+
+        if (similarUsers.isEmpty()) {
+            return new ArrayList<>();
         }
+
+        Long similarUserId = similarUsers.get(0);
+
+        String recommendationsSql = """
+            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
+            FROM films f
+            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+            WHERE f.film_id IN (
+                SELECT film_id FROM likes WHERE user_id = ?
+                EXCEPT
+                SELECT film_id FROM likes WHERE user_id = ?
+            )
+            ORDER BY f.film_id
+            """;
+
+        List<Film> films = jdbcTemplate.query(recommendationsSql, rowMapper, similarUserId, userId);
+        loadGenresForFilms(films);
+        loadDirectorsForFilms(films);
+        loadLikesForFilms(films);
+        return films;
     }
 
     private void loadGenres(Film film) {
