@@ -97,6 +97,20 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
             ORDER BY likes_count DESC, f.film_id
             """;
 
+    // НОВЫЙ SQL ЗАПРОС ДЛЯ ОБЩИХ ФИЛЬМОВ
+    private static final String GET_COMMON_FILMS = """
+            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
+                   COUNT(DISTINCT l.user_id) AS likes_count
+            FROM films f
+            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+            INNER JOIN likes l ON f.film_id = l.film_id
+            WHERE l.user_id IN (?, ?)
+            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
+                     f.mpa_rating_id, mr.name, mr.description
+            HAVING COUNT(DISTINCT l.user_id) = 2
+            ORDER BY likes_count DESC, f.film_id
+            """;
 
     private static final String INSERT = """
             INSERT INTO films (name, description, release_date, duration, mpa_rating_id)
@@ -295,6 +309,16 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         loadDirectorsForFilms(films);
         loadLikesForFilms(films);
 
+        return films;
+    }
+
+    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);
+        loadGenresForFilms(films);
+        loadDirectorsForFilms(films);
+        loadLikesForFilms(films);
         return films;
     }
 

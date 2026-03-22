@@ -29,4 +29,7 @@ public interface FilmStorage {
     Collection<Film> findByDirectorId(Long directorId, String sortBy);
 
     Collection<Film> search(String query, String by);
+
+    // Метод для общих фильмов
+    Collection<Film> getCommonFilms(Long userId, Long friendId);
 }

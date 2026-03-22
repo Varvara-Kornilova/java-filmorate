@@ -241,6 +241,31 @@ public class FilmService {
         return films;
     }
 
+    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        // Проверяем существование пользователей
+        if (!userStorage.findById(userId).isPresent()) {
+            throw new NotFoundException(
+                    String.format("Пользователь с идентификатором %d не найден", userId));
+        }
+
+        if (!userStorage.findById(friendId).isPresent()) {
+            throw new NotFoundException(
+                    String.format("Пользователь с идентификатором %d не найден", friendId));
+        }
+
+        // Получаем общие фильмы из хранилища
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(userId, friendId);
+
+        // Сортируем жанры и режиссёров
+        commonFilms.forEach(this::sortFilmCollections);
+
+        log.info("Найдено {} общих фильмов у пользователей {} и {}",
+                 commonFilms.size(), userId, friendId);
+
+        return commonFilms;
+    }
+
     // Достаём id жанров из набора жанров
     private Set<Long> extractGenreIds(Set<Genre> genres) {
         return genres.stream()

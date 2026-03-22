@@ -75,6 +75,15 @@ public class FilmController {
         return filmService.getFilmsByDirector(directorId, sortBy);
     }
 
+    // НОВЫЙ ЭНДПОИНТ
+    @GetMapping("/common")
+    public Collection<Film> getCommonFilms(
+            @RequestParam @Positive(message = "ID пользователя должен быть положительным") Long userId,
+            @RequestParam @Positive(message = "ID друга должен быть положительным") Long friendId) {
+        log.info("Запрошены общие фильмы пользователей {} и {}", userId, friendId);
+        return filmService.getCommonFilms(userId, friendId);
+    }
+
     @PostMapping
     public Film registerFilm(@Valid @RequestBody Film film) {
         log.info("Создание нового фильма: \"{}\"", film.getName());

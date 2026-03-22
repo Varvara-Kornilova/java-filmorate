@@ -32,6 +32,8 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -166,6 +168,67 @@ public class FilmSearchControllerTest {
                 filmController.searchFilms("test", "invalid"));
     }
 
+    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
+    @Test
+    public void getCommonFilms_ShouldReturnCommonFilms() {
+        // создаем пользователей
+        User user1 = createTestUser("common1@test.com", "common1");
+        User user2 = createTestUser("common2@test.com", "common2");
+
+        // создаем фильмы
+        Film film1 = createTestFilm("Common Film 1");
+        Film film2 = createTestFilm("Common Film 2");
+        Film film3 = createTestFilm("Not Common Film");
+
+        // добавляем лайки
+        filmController.applyLike(film1.getId(), user1.getId());
+        filmController.applyLike(film1.getId(), user2.getId());
+        filmController.applyLike(film2.getId(), user1.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+        filmController.applyLike(film3.getId(), user1.getId());
+
+        // получаем общие фильмы
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        // проверяем результат
+        assertFalse(commonFilms.isEmpty());
+        assertEquals(2, commonFilms.size());
+    }
+
+    @Test
+    public void getCommonFilms_ShouldReturnEmptyList_WhenNoCommonFilms() {
+        User user1 = createTestUser("noCommon1@test.com", "noCommon1");
+        User user2 = createTestUser("noCommon2@test.com", "noCommon2");
+
+        Film film1 = createTestFilm("Film A");
+        Film film2 = createTestFilm("Film B");
+
+        filmController.applyLike(film1.getId(), user1.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmController.getCommonFilms(user1.getId(), user2.getId());
+
+        assertTrue(commonFilms.isEmpty());
+    }
+
+    @Test
+    public void getCommonFilms_ShouldThrowException_WhenUserNotFound() {
+        User user = createTestUser("existing@test.com", "existing");
+
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getCommonFilms(999L, user.getId());
+        });
+    }
+
+    @Test
+    public void getCommonFilms_ShouldThrowException_WhenFriendNotFound() {
+        User user = createTestUser("existing2@test.com", "existing2");
+
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getCommonFilms(user.getId(), 999L);
+        });
+    }
+
     // создаем тестовый фильм с режиссером
     private Film createTestFilmWithDirector(String name, Long directorId) {
         long timestamp = System.nanoTime();
@@ -199,6 +262,16 @@ public class FilmSearchControllerTest {
         Director director = new Director();
         director.setName(name);
         return directorController.createDirector(director);
+    }
+
+    // создаем тестового пользователя
+    private User createTestUser(String email, String login) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName(login);
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return userStorage.create(user);
     }
 
     // очищаем таблицы перед тестами
