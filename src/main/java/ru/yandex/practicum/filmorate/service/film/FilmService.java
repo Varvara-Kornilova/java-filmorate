@@ -291,19 +291,4 @@ public class FilmService {
                     .collect(Collectors.toCollection(LinkedHashSet::new)));
         }
     }
-
-    public Collection<Film> getRecommendations(Long userId) {
-        if (!userStorage.findById(userId).isPresent()) {
-            throw new NotFoundException(
-                    String.format("Пользователь с идентификатором %d не найден", userId));
-        }
-
-        Collection<Film> recommendations = filmStorage.getRecommendations(userId);
-
-        recommendations.forEach(this::sortFilmCollections);
-
-        log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
-
-        return recommendations;
-    }
 }
