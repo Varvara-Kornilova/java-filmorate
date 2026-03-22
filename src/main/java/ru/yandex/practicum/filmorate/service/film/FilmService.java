@@ -259,9 +259,8 @@ public class FilmService {
         return films;
     }
 
-    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
     public Collection<Film> getCommonFilms(Long userId, Long friendId) {
-        // Проверяем существование пользователей
+
         if (!userStorage.findById(userId).isPresent()) {
             throw new NotFoundException(
                     String.format("Пользователь с идентификатором %d не найден", userId));
@@ -272,10 +271,8 @@ public class FilmService {
                     String.format("Пользователь с идентификатором %d не найден", friendId));
         }
 
-        // Получаем общие фильмы из хранилища
         Collection<Film> commonFilms = filmStorage.getCommonFilms(userId, friendId);
 
-        // Сортируем жанры и режиссёров
         commonFilms.forEach(this::sortFilmCollections);
 
         log.info("Найдено {} общих фильмов у пользователей {} и {}",
