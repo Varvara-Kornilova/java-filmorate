@@ -97,7 +97,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
             ORDER BY likes_count DESC, f.film_id
             """;
 
-    // НОВЫЙ SQL ЗАПРОС ДЛЯ ОБЩИХ ФИЛЬМОВ
     private static final String GET_COMMON_FILMS = """
             SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
                    f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
@@ -110,6 +109,37 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
                      f.mpa_rating_id, mr.name, mr.description
             HAVING COUNT(DISTINCT l.user_id) = 2
             ORDER BY likes_count DESC, f.film_id
+            """;
+
+    private static final String GET_RECOMMENDATIONS = """
+            WITH user_likes AS (
+                -- Фильмы, которые лайкнул текущий пользователь
+                SELECT film_id FROM likes WHERE user_id = ?
+            ),
+            similar_users AS (
+                -- Находим пользователя с максимальным пересечением лайков
+                SELECT l.user_id, COUNT(*) as common_likes
+                FROM likes l
+                WHERE l.user_id != ?
+                  AND l.film_id IN (SELECT film_id FROM user_likes)
+                GROUP BY l.user_id
+                ORDER BY common_likes DESC, l.user_id
+                LIMIT 1
+            ),
+            recommendations_raw AS (
+                -- Получаем фильмы, которые лайкнул похожий пользователь,
+                -- но текущий пользователь ещё не лайкнул
+                SELECT l.film_id
+                FROM likes l
+                WHERE l.user_id = (SELECT user_id FROM similar_users)
+                  AND l.film_id NOT IN (SELECT film_id FROM user_likes)
+            )
+            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
+            FROM films f
+            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+            WHERE f.film_id IN (SELECT film_id FROM recommendations_raw)
+            ORDER BY f.film_id
             """;
 
     private static final String INSERT = """
@@ -312,10 +342,18 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         return films;
     }
 
-    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
     @Override
     public Collection<Film> getCommonFilms(Long userId, Long friendId) {
         List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);
+        loadGenresForFilms(films);
+        loadDirectorsForFilms(films);
+        loadLikesForFilms(films);
+        return films;
+    }
+
+    @Override
+    public Collection<Film> getRecommendations(Long userId) {
+        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId);
         loadGenresForFilms(films);
         loadDirectorsForFilms(films);
         loadLikesForFilms(films);
