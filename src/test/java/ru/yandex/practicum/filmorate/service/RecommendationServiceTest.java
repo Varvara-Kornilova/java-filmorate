@@ -13,7 +13,6 @@ import ru.yandex.practicum.filmorate.service.recommendation.RecommendationServic
 
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
