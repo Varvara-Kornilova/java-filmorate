@@ -42,6 +42,7 @@ public class FilmService {
     private final DirectorStorage directorStorage;
     private final GenreStorage genreStorage;
     private final EventService eventService;
+    private final RecommendationService recommendationService;
 
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
@@ -50,7 +51,8 @@ public class FilmService {
                        DirectorService directorService,
                        DirectorStorage directorStorage,
                        GenreStorage genreStorage,
-                       EventService eventService) {
+                       EventService eventService,
+                       RecommendationService recommendationService) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.mpaService = mpaService;
@@ -59,6 +61,22 @@ public class FilmService {
         this.directorStorage = directorStorage;
         this.genreStorage = genreStorage;
         this.eventService = eventService;
+        this.recommendationService = recommendationService;
+    }
+
+    public Collection<Film> getRecommendations(Long userId) {
+        if (!userStorage.findById(userId).isPresent()) {
+            throw new NotFoundException(
+                    String.format("Пользователь с идентификатором %d не найден", userId));
+        }
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(userId);
+
+        recommendations.forEach(this::sortFilmCollections);
+
+        log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
+
+        return recommendations;
     }
 
     public Collection<Film> getAllFilms() {
