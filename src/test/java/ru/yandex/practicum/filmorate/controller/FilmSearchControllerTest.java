@@ -229,6 +229,43 @@ public class FilmSearchControllerTest {
         });
     }
 
+    @Test
+    public void getRecommendations_ShouldReturnRecommendations() {
+        User user1 = createTestUser("recTest1@test.com", "recTest1");
+        User user2 = createTestUser("recTest2@test.com", "recTest2");
+
+        Film film1 = createTestFilm("Rec Film 1");
+        Film film2 = createTestFilm("Rec Film 2");
+        Film film3 = createTestFilm("Rec Film 3");
+
+        filmController.applyLike(film1.getId(), user1.getId());
+
+        filmController.applyLike(film1.getId(), user2.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+        filmController.applyLike(film3.getId(), user2.getId());
+
+        Collection<Film> recommendations = filmController.getRecommendations(user1.getId());
+
+        assertFalse(recommendations.isEmpty());
+        assertEquals(2, recommendations.size());
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnEmptyList_WhenNoRecommendations() {
+        User user = createTestUser("emptyRecTest@test.com", "emptyRecTest");
+
+        Collection<Film> recommendations = filmController.getRecommendations(user.getId());
+
+        assertTrue(recommendations.isEmpty());
+    }
+
+    @Test
+    public void getRecommendations_ShouldThrowException_WhenUserNotFound() {
+        assertThrows(NotFoundException.class, () -> {
+            filmController.getRecommendations(999L);
+        });
+    }
+
     // создаем тестовый фильм с режиссером
     private Film createTestFilmWithDirector(String name, Long directorId) {
         long timestamp = System.nanoTime();
