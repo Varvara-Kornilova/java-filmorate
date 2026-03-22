@@ -75,7 +75,6 @@ public class FilmController {
         return filmService.getFilmsByDirector(directorId, sortBy);
     }
 
-    // НОВЫЙ ЭНДПОИНТ
     @GetMapping("/common")
     public Collection<Film> getCommonFilms(
             @RequestParam @Positive(message = "ID пользователя должен быть положительным") Long userId,
