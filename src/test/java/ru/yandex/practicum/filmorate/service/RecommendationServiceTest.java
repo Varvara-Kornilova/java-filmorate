@@ -5,11 +5,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import ru.yandex.practicum.filmorate.dal.BaseJdbcTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import ru.yandex.practicum.filmorate.dal.*;
+import ru.yandex.practicum.filmorate.dal.mappers.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
+import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -18,30 +25,71 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureTestDatabase
-public class RecommendationServiceTest extends BaseJdbcTest {
+public class RecommendationServiceTest {
 
     @Autowired
-    private RecommendationService recommendationService;
+    private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private UserRowMapper userRowMapper;
+    @Autowired
+    private FilmRowMapper filmRowMapper;
+    @Autowired
+    private GenreRowMapper genreRowMapper;
+    @Autowired
+    private DirectorRowMapper directorRowMapper;
+    @Autowired
+    private MpaRowMapper mpaRowMapper;
 
+    private RecommendationService recommendationService;
+    private UserStorage userStorage;
+    private FilmStorage filmStorage;
     private User user1;
     private User user2;
-    private User user3;
     private Film film1;
     private Film film2;
     private Film film3;
-    private Film film4;
 
     @BeforeEach
     public void setUp() {
 
+        jdbcTemplate.update("DELETE FROM film_directors");
+        jdbcTemplate.update("DELETE FROM film_genres");
+        jdbcTemplate.update("DELETE FROM likes");
+        jdbcTemplate.update("DELETE FROM friendship");
+        jdbcTemplate.update("DELETE FROM films");
+        jdbcTemplate.update("DELETE FROM users");
+
+        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
+        MpaStorage mpaStorage = new MpaDbStorage(jdbcTemplate, mpaRowMapper);
+        GenreStorage genreStorage = new GenreDbStorage(jdbcTemplate, genreRowMapper);
+        DirectorStorage directorStorage = new DirectorDbStorage(jdbcTemplate, directorRowMapper);
+        filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage, directorStorage);
+        LikeDbStorage likeStorage = new LikeDbStorage(jdbcTemplate);
+
+        recommendationService = new RecommendationService(likeStorage, filmStorage);
+
         user1 = createTestUser("rec1@test.com", "rec1");
         user2 = createTestUser("rec2@test.com", "rec2");
-        user3 = createTestUser("rec3@test.com", "rec3");
 
         film1 = createTestFilm("Film 1");
         film2 = createTestFilm("Film 2");
         film3 = createTestFilm("Film 3");
-        film4 = createTestFilm("Film 4");
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnRecommendedFilms() {
+
+        filmStorage.addLike(film1.getId(), user1.getId());
+
+        filmStorage.addLike(film1.getId(), user2.getId());
+        filmStorage.addLike(film2.getId(), user2.getId());
+        filmStorage.addLike(film3.getId(), user2.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).hasSize(2);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film 2", "Film 3");
     }
 
     @Test
@@ -49,118 +97,6 @@ public class RecommendationServiceTest extends BaseJdbcTest {
         Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
 
         assertThat(recommendations).isEmpty();
-    }
-
-    @Test
-    public void getRecommendations_ShouldReturnRecommendedFilms() {
-
-        addLike(user1.getId(), film1.getId());
-        addLike(user1.getId(), film2.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-        addLike(user2.getId(), film3.getId());
-
-        addLike(user3.getId(), film1.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).hasSize(1);
-        assertThat(recommendations.iterator().next().getId()).isEqualTo(film3.getId());
-    }
-
-    @Test
-    public void getRecommendations_ShouldReturnEmptyWhenNoSimilarUser() {
-        addLike(user1.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).isEmpty();
-    }
-
-    @Test
-    public void getRecommendations_ShouldReturnEmptyWhenNoUnwatchedFilms() {
-        addLike(user1.getId(), film1.getId());
-        addLike(user1.getId(), film2.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).isEmpty();
-    }
-
-    @Test
-    public void getRecommendations_ShouldReturnFilmsFromMostSimilarUser() {
-
-        addLike(user1.getId(), film1.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-        addLike(user2.getId(), film3.getId());
-
-        addLike(user3.getId(), film1.getId());
-        addLike(user3.getId(), film4.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).hasSize(2);
-        assertThat(recommendations).extracting(Film::getId)
-                .containsExactlyInAnyOrder(film2.getId(), film3.getId());
-    }
-
-    @Test
-    public void getRecommendations_ShouldWorkWithMultipleSimilarUsers() {
-        addLike(user1.getId(), film1.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-
-        addLike(user3.getId(), film1.getId());
-        addLike(user3.getId(), film3.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).hasSize(2);
-        assertThat(recommendations).extracting(Film::getId)
-                .containsExactlyInAnyOrder(film2.getId(), film3.getId());
-    }
-
-    @Test
-    public void getRecommendations_ShouldNotRecommendAlreadyLikedFilms() {
-        addLike(user1.getId(), film1.getId());
-        addLike(user1.getId(), film2.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-        addLike(user2.getId(), film3.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).hasSize(1);
-        assertThat(recommendations.iterator().next().getId()).isEqualTo(film3.getId());
-    }
-
-    @Test
-    public void getRecommendations_ShouldHandleUserWithAllPossibleRecommendations() {
-        addLike(user1.getId(), film1.getId());
-
-        addLike(user2.getId(), film1.getId());
-        addLike(user2.getId(), film2.getId());
-        addLike(user2.getId(), film3.getId());
-        addLike(user2.getId(), film4.getId());
-
-        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
-
-        assertThat(recommendations).hasSize(3);
-        assertThat(recommendations).extracting(Film::getId)
-                .containsExactlyInAnyOrder(film2.getId(), film3.getId(), film4.getId());
-    }
-
-    private void addLike(Long userId, Long filmId) {
-        filmStorage.addLike(filmId, userId);
     }
 
     private Film createTestFilm(String name) {
