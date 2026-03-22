@@ -79,6 +79,13 @@ public class RecommendationServiceTest {
     @Test
     public void getRecommendations_ShouldReturnRecommendedFilms() {
 
+        User user1 = createTestUser("rec1@test.com", "rec1");
+        User user2 = createTestUser("rec2@test.com", "rec2");
+
+        Film film1 = createTestFilm("Film 1");
+        Film film2 = createTestFilm("Film 2");
+        Film film3 = createTestFilm("Film 3");
+
         filmStorage.addLike(film1.getId(), user1.getId());
 
         filmStorage.addLike(film1.getId(), user2.getId());
