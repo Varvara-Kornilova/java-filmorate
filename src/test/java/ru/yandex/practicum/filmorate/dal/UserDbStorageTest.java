@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
+import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
@@ -22,20 +23,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class UserDbStorageTest extends BaseJdbcTest {
 
     @Autowired
+    private UserRowMapper userRowMapper;
+    @Autowired
     private FilmRowMapper filmRowMapper;
     @Autowired
     private GenreStorage genreStorage;
     @Autowired
     private DirectorStorage directorStorage;
 
-    private UserStorage userStorageWithFilms;
+    private UserStorage userStorage;
 
     @BeforeEach
     public void setUp() {
         cleanUp();
 
-        userStorageWithFilms = new UserDbStorage(jdbcTemplate, userRowMapper,
-                                                  filmRowMapper, genreStorage, directorStorage);
+        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper, filmRowMapper, genreStorage, directorStorage);
     }
 
     @Override
@@ -59,10 +61,10 @@ public class UserDbStorageTest extends BaseJdbcTest {
         user.setName("Test User");
         user.setBirthday(LocalDate.of(1990, 1, 1));
 
-        User created = userStorageWithFilms.create(user);
+        User created = userStorage.create(user);
         assertThat(created.getId()).isNotNull();
 
-        Optional<User> found = userStorageWithFilms.findById(created.getId());
+        Optional<User> found = userStorage.findById(created.getId());
         assertThat(found).isPresent();
         assertThat(found.get().getEmail()).isEqualTo("test@example.com");
         assertThat(found.get().getLogin()).isEqualTo("testuser");
@@ -76,8 +78,8 @@ public class UserDbStorageTest extends BaseJdbcTest {
         user.setName("Updated Name");
         user.setEmail("new@example.com");
 
-        User updated = userStorageWithFilms.update(user);
-        Optional<User> found = userStorageWithFilms.findById(user.getId());
+        User updated = userStorage.update(user);
+        Optional<User> found = userStorage.findById(user.getId());
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Updated Name");
         assertThat(found.get().getEmail()).isEqualTo("new@example.com");
@@ -88,7 +90,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         createUser("u1@test.com", "user1", "User One");
         createUser("u2@test.com", "user2", "User Two");
 
-        Collection<User> users = userStorageWithFilms.findAll();
+        Collection<User> users = userStorage.findAll();
         assertThat(users).hasSize(2);
         assertThat(users).extracting("login").containsExactlyInAnyOrder("user1", "user2");
     }
@@ -96,16 +98,16 @@ public class UserDbStorageTest extends BaseJdbcTest {
     @Test
     public void testDelete() {
         User created = createUser("todelete@example.com", "todelete", "ToDelete");
-        userStorageWithFilms.delete(created.getId());
-        Optional<User> found = userStorageWithFilms.findById(created.getId());
+        userStorage.delete(created.getId());
+        Optional<User> found = userStorage.findById(created.getId());
         assertThat(found).isEmpty();
     }
 
     @Test
     public void testContains() {
         User created = createUser("exists@example.com", "exists", "Exists");
-        assertThat(userStorageWithFilms.contains(created.getId())).isTrue();
-        assertThat(userStorageWithFilms.contains(999L)).isFalse();
+        assertThat(userStorage.contains(created.getId())).isTrue();
+        assertThat(userStorage.contains(999L)).isFalse();
     }
 
     @Test
@@ -131,7 +133,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         addLike(film1.getId(), otherUser.getId());
         addLike(film5.getId(), otherUser.getId());
 
-        Collection<Film> recommendations = userStorageWithFilms.getRecommendations(targetUser.getId());
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
         assertThat(recommendations).hasSize(2);
         assertThat(recommendations).extracting(Film::getName)
@@ -149,7 +151,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         addLike(film1.getId(), targetUser.getId());
         addLike(film2.getId(), anotherUser.getId());
 
-        Collection<Film> recommendations = userStorageWithFilms.getRecommendations(targetUser.getId());
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
         assertThat(recommendations).isEmpty();
     }
@@ -179,7 +181,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
 
         addLike(lessPopularRecommended.getId(), extra1.getId());
 
-        Collection<Film> recommendations = userStorageWithFilms.getRecommendations(targetUser.getId());
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
         List<Film> filmList = new ArrayList<>(recommendations);
         assertThat(filmList).hasSize(2);
@@ -191,7 +193,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
     public void testGetRecommendations_ShouldReturnEmpty_WhenNoFilms() {
         User targetUser = createUser("noFilms@test.com", "nofilms", "No Films");
 
-        Collection<Film> recommendations = userStorageWithFilms.getRecommendations(targetUser.getId());
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
         assertThat(recommendations).isEmpty();
     }
@@ -207,7 +209,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         addLike(film1.getId(), similarUser.getId());
         addLike(film2.getId(), similarUser.getId());
 
-        Collection<Film> recommendations = userStorageWithFilms.getRecommendations(targetUser.getId());
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
         assertThat(recommendations).isEmpty();
     }
@@ -218,7 +220,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         user.setLogin(login);
         user.setName(name);
         user.setBirthday(LocalDate.of(1990, 1, 1));
-        return userStorageWithFilms.create(user);
+        return userStorage.create(user);
     }
 
     private Film createFilm(String name) {
