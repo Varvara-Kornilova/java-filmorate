@@ -21,19 +21,28 @@ public class RecommendationService {
     }
 
     public Collection<Film> getRecommendations(Long userId) {
-        log.info("getRecommendations вызван для userId={}", userId);
+        log.info("=== НАЧАЛО getRecommendations для userId: {} ===", userId);
 
         try {
-
+            log.info("Шаг 1: Получение всех лайков пользователей");
             Map<Long, Set<Long>> userLikes = likeStorage.getAllUserLikes();
+            log.info("Шаг 1 завершён: получено {} пользователей с лайками", userLikes.size());
 
-            if (!userLikes.containsKey(userId) || userLikes.get(userId).isEmpty()) {
-                log.info("У пользователя {} нет лайков", userId);
+            log.info("Шаг 2: Проверка наличия лайков у пользователя {}", userId);
+            if (!userLikes.containsKey(userId)) {
+                log.info("Пользователь {} не найден в userLikes", userId);
                 return Collections.emptyList();
             }
 
             Set<Long> currentUserLikes = userLikes.get(userId);
+            log.info("У пользователя {} {} лайков: {}", userId, currentUserLikes.size(), currentUserLikes);
 
+            if (currentUserLikes.isEmpty()) {
+                log.info("У пользователя {} нет лайков", userId);
+                return Collections.emptyList();
+            }
+
+            log.info("Шаг 3: Поиск похожего пользователя");
             Long bestMatch = null;
             int maxCommon = 0;
 
@@ -47,35 +56,50 @@ public class RecommendationService {
                     if (currentUserLikes.contains(filmId)) common++;
                 }
 
+                log.debug("Пользователь {} имеет {} общих лайков с пользователем {}",
+                         otherUserId, common, userId);
+
                 if (common > maxCommon) {
                     maxCommon = common;
                     bestMatch = otherUserId;
                 }
             }
 
+            log.info("Шаг 3 завершён: найден пользователь {}, общих лайков: {}", bestMatch, maxCommon);
+
             if (bestMatch == null) {
                 log.info("Не найден похожий пользователь для {}", userId);
                 return Collections.emptyList();
             }
 
+            log.info("Шаг 4: Получение фильмов для рекомендации");
             Set<Long> bestMatchLikes = userLikes.get(bestMatch);
             Set<Long> recommendedFilmIds = new HashSet<>(bestMatchLikes);
             recommendedFilmIds.removeAll(currentUserLikes);
 
+            log.info("Рекомендуемые filmId: {}", recommendedFilmIds);
+
             if (recommendedFilmIds.isEmpty()) {
+                log.info("Нет новых фильмов для рекомендации пользователю {}", userId);
                 return Collections.emptyList();
             }
 
+            log.info("Шаг 5: Загрузка полной информации о фильмах");
             List<Film> recommendations = new ArrayList<>();
             for (Long filmId : recommendedFilmIds) {
+                log.debug("Загрузка фильма с id: {}", filmId);
                 filmStorage.findById(filmId).ifPresent(recommendations::add);
             }
 
-            log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
+            log.info("Шаг 5 завершён: загружено {} фильмов", recommendations.size());
+            log.info("=== УСПЕШНО найдено {} рекомендаций для пользователя {} ===",
+                     recommendations.size(), userId);
             return recommendations;
 
         } catch (Exception e) {
-            log.error("Ошибка в getRecommendations: {}", e.getMessage(), e);
+            log.error("!!! КРИТИЧЕСКАЯ ОШИБКА в getRecommendations для пользователя {}: {}",
+                      userId, e.getMessage(), e);
+            e.printStackTrace();
             return Collections.emptyList();
         }
     }
