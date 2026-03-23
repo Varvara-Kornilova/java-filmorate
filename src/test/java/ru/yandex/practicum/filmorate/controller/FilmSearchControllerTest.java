@@ -6,46 +6,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import ru.yandex.practicum.filmorate.dal.DirectorDbStorage;
-import ru.yandex.practicum.filmorate.dal.EventDbStorage;
-import ru.yandex.practicum.filmorate.dal.FilmDbStorage;
-import ru.yandex.practicum.filmorate.dal.GenreDbStorage;
-import ru.yandex.practicum.filmorate.dal.MpaDbStorage;
-import ru.yandex.practicum.filmorate.dal.UserDbStorage;
-import ru.yandex.practicum.filmorate.dal.mappers.DirectorRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.EventRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.MpaRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
+import ru.yandex.practicum.filmorate.dal.*;
+import ru.yandex.practicum.filmorate.dal.mappers.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.director.DirectorService;
 import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 import ru.yandex.practicum.filmorate.service.genre.GenreService;
 import ru.yandex.practicum.filmorate.service.mpa.MpaService;
+import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
 import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.dal.LikeDbStorage;
-import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @AutoConfigureTestDatabase
@@ -76,7 +63,6 @@ public class FilmSearchControllerTest {
 
     @BeforeEach
     public void init() {
-        // очищаем тестовые данные
         clearTestData();
 
         userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
@@ -102,7 +88,8 @@ public class FilmSearchControllerTest {
                 directorStorage,
                 genreStorage,
                 eventService,
-                recommendationService
+                recommendationService,
+                likeStorage
         );
 
         filmController = new FilmController(filmService);
@@ -111,14 +98,11 @@ public class FilmSearchControllerTest {
 
     @Test
     public void search_ByDirector_ReturnsMatchingFilms() {
-        // создаем режиссера и фильм с ним
         Director director = createTestDirector("DirectorSearchName");
         Film film = createTestFilmWithDirector("Film By Director", director.getId());
 
-        // ищем фильмы по режиссеру
         Collection<Film> results = filmController.searchFilms("DirectorSearch", "director");
 
-        // проверяем, что фильм найден
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         assertEquals(film.getName(), results.iterator().next().getName());
@@ -126,29 +110,22 @@ public class FilmSearchControllerTest {
 
     @Test
     public void search_ByTitleAndDirector_ReturnsCombinedResults() {
-        // создаем фильм с совпадением по названию
         createTestFilm("UniqueSearchWord2024");
 
-        // создаем фильм с совпадением по режиссеру
         Director director = createTestDirector("UniqueSearchWordDir");
         createTestFilmWithDirector("Another Film", director.getId());
 
-        // ищем и по названию, и по режиссеру
         Collection<Film> results = filmController.searchFilms("UniqueSearchWord", "title,director");
 
-        // проверяем, что нашли оба фильма
         assertEquals(2, results.size());
     }
 
     @Test
     public void search_ByTitle_ReturnsMatchingFilms() {
-        // создаем фильм с нужным названием
         Film film = createTestFilm("SearchTestTitle2024");
 
-        // ищем фильм по названию
         Collection<Film> results = filmController.searchFilms("SearchTest", "title");
 
-        // проверяем, что фильм найден
         assertFalse(results.isEmpty());
         assertEquals(1, results.size());
         assertEquals(film.getName(), results.iterator().next().getName());
@@ -156,26 +133,21 @@ public class FilmSearchControllerTest {
 
     @Test
     public void search_EmptyResult_ReturnsEmptyList() {
-        // создаем фильм с другим названием
         createTestFilm("CompletelyDifferentName");
 
-        // ищем несуществующее совпадение
         Collection<Film> results = filmController.searchFilms("NonExistentWord12345", "title");
 
-        // проверяем, что результат пустой
         assertTrue(results.isEmpty());
     }
 
     @Test
     public void search_InvalidByParameter_ThrowsValidationException() {
-        // проверяем, что при неверном параметре бросается ошибка
         assertThrows(ValidationException.class, () ->
                 filmController.searchFilms("test", "invalid"));
     }
 
     @Test
     public void getCommonFilms_ShouldReturnCommonFilms() {
-
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
@@ -193,6 +165,8 @@ public class FilmSearchControllerTest {
 
         assertFalse(commonFilms.isEmpty());
         assertEquals(2, commonFilms.size());
+        assertThat(commonFilms).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Common Film 1", "Common Film 2");
     }
 
     @Test
@@ -231,6 +205,7 @@ public class FilmSearchControllerTest {
 
     @Test
     public void getRecommendations_ShouldReturnRecommendations() {
+
         User user1 = createTestUser("recTest1@test.com", "recTest1");
         User user2 = createTestUser("recTest2@test.com", "recTest2");
 
@@ -248,6 +223,8 @@ public class FilmSearchControllerTest {
 
         assertFalse(recommendations.isEmpty());
         assertEquals(2, recommendations.size());
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Rec Film 2", "Rec Film 3");
     }
 
     @Test
@@ -266,7 +243,67 @@ public class FilmSearchControllerTest {
         });
     }
 
-    // создаем тестовый фильм с режиссером
+    @Test
+    public void getRecommendations_ShouldReturnEmptyList_WhenUserHasNoLikes() {
+        User user = createTestUser("noLikesUser@test.com", "noLikesUser");
+
+        Collection<Film> recommendations = filmController.getRecommendations(user.getId());
+
+        assertTrue(recommendations.isEmpty());
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnOnlyUnwatchedFilms() {
+
+        User user1 = createTestUser("recUserA@test.com", "recUserA");
+        User user2 = createTestUser("recUserB@test.com", "recUserB");
+
+        Film film1 = createTestFilm("Film A");
+        Film film2 = createTestFilm("Film B");
+        Film film3 = createTestFilm("Film C");
+
+        filmController.applyLike(film1.getId(), user1.getId());
+        filmController.applyLike(film2.getId(), user1.getId());
+
+        filmController.applyLike(film1.getId(), user2.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+        filmController.applyLike(film3.getId(), user2.getId());
+
+        Collection<Film> recommendations = filmController.getRecommendations(user1.getId());
+
+        assertEquals(1, recommendations.size());
+        assertEquals(film3.getName(), recommendations.iterator().next().getName());
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnRecommendationsFromMostSimilarUser() {
+
+        User user1 = createTestUser("userX@test.com", "userX");
+        User user2 = createTestUser("userY@test.com", "userY");
+        User user3 = createTestUser("userZ@test.com", "userZ");
+
+        Film film1 = createTestFilm("Film Alpha");
+        Film film2 = createTestFilm("Film Beta");
+        Film film3 = createTestFilm("Film Gamma");
+        Film film4 = createTestFilm("Film Delta");
+
+        filmController.applyLike(film1.getId(), user1.getId());
+
+        filmController.applyLike(film1.getId(), user2.getId());
+        filmController.applyLike(film2.getId(), user2.getId());
+        filmController.applyLike(film3.getId(), user2.getId());
+
+        filmController.applyLike(film1.getId(), user3.getId());
+        filmController.applyLike(film4.getId(), user3.getId());
+
+        Collection<Film> recommendations = filmController.getRecommendations(user1.getId());
+
+        assertFalse(recommendations.isEmpty());
+        assertEquals(2, recommendations.size());
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film Beta", "Film Gamma");
+    }
+
     private Film createTestFilmWithDirector(String name, Long directorId) {
         long timestamp = System.nanoTime();
 
@@ -289,19 +326,16 @@ public class FilmSearchControllerTest {
         return filmController.registerFilm(film);
     }
 
-    // создаем тестовый фильм без режиссера
     private Film createTestFilm(String name) {
         return createTestFilmWithDirector(name, null);
     }
 
-    // создаем тестового режиссера
     private Director createTestDirector(String name) {
         Director director = new Director();
         director.setName(name);
         return directorController.createDirector(director);
     }
 
-    // создаем тестового пользователя
     private User createTestUser(String email, String login) {
         User user = new User();
         user.setEmail(email);
@@ -311,7 +345,6 @@ public class FilmSearchControllerTest {
         return userStorage.create(user);
     }
 
-    // очищаем таблицы перед тестами
     private void clearTestData() {
         jdbcTemplate.update("DELETE FROM events");
         jdbcTemplate.update("DELETE FROM review_likes");
