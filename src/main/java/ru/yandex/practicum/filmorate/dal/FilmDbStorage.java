@@ -1,353 +1,287 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.model.Director;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
-import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
+import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
-@Repository
-public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
+import static org.assertj.core.api.Assertions.assertThat;
 
-    private static final String SELECT_FILM = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            """;
+public class FilmDbStorageTest extends BaseJdbcTest {
 
-    private static final String FIND_BY_ID = SELECT_FILM + " WHERE f.film_id = ?";
-    private static final String FIND_ALL = SELECT_FILM + " ORDER BY f.film_id";
+    private LikeDbStorage likeStorage;
 
-    private static final String FIND_BY_DIRECTOR_SORT_LIKES = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            JOIN film_directors fd ON f.film_id = fd.film_id
-            LEFT JOIN likes l ON f.film_id = l.film_id
-            WHERE fd.director_id = ?
-            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                     f.mpa_rating_id, mr.name, mr.description
-            ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String FIND_BY_DIRECTOR_SORT_YEAR = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            JOIN film_directors fd ON f.film_id = fd.film_id
-            WHERE fd.director_id = ?
-            ORDER BY f.release_date, f.film_id
-            """;
-
-    private static final String SEARCH_BY_TITLE = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            LEFT JOIN likes l ON f.film_id = l.film_id
-            WHERE LOWER(f.name) LIKE LOWER(?)
-            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                     f.mpa_rating_id, mr.name, mr.description
-            ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String SEARCH_BY_DIRECTOR = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            LEFT JOIN likes l ON f.film_id = l.film_id
-            JOIN film_directors fd ON f.film_id = fd.film_id
-            JOIN directors d ON fd.director_id = d.director_id
-            WHERE LOWER(d.name) LIKE LOWER(?)
-            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                     f.mpa_rating_id, mr.name, mr.description
-            ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String SEARCH_BY_TITLE_AND_DIRECTOR = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            LEFT JOIN likes l ON f.film_id = l.film_id
-            LEFT JOIN film_directors fd ON f.film_id = fd.film_id
-            LEFT JOIN directors d ON fd.director_id = d.director_id
-            WHERE LOWER(f.name) LIKE LOWER(?) OR LOWER(d.name) LIKE LOWER(?)
-            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                     f.mpa_rating_id, mr.name, mr.description
-            ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String GET_COMMON_FILMS = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                   COUNT(DISTINCT l.user_id) AS likes_count
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            INNER JOIN likes l ON f.film_id = l.film_id
-            WHERE l.user_id IN (?, ?)
-            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                     f.mpa_rating_id, mr.name, mr.description
-            HAVING COUNT(DISTINCT l.user_id) = 2
-            ORDER BY likes_count DESC, f.film_id
-            """;
-
-    private static final String GET_RECOMMENDATIONS = """
-            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description
-            FROM films f
-            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-            WHERE f.film_id IN (
-                SELECT l.film_id
-                FROM likes l
-                WHERE l.user_id = (
-                    SELECT l2.user_id
-                    FROM likes l2
-                    WHERE l2.user_id != ?
-                      AND l2.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
-                    GROUP BY l2.user_id
-                    ORDER BY COUNT(*) DESC
-                    LIMIT 1
-                )
-                AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)
-            )
-            ORDER BY f.film_id
-            """;
-
-    private static final String INSERT = """
-            INSERT INTO films (name, description, release_date, duration, mpa_rating_id)
-            VALUES (?, ?, ?, ?, ?)
-            """;
-
-    private static final String UPDATE = """
-            UPDATE films SET
-            name = ?,
-            description = ?,
-            release_date = ?,
-            duration = ?,
-            mpa_rating_id = ?
-            WHERE film_id = ?
-            """;
-
-    private static final String DELETE = "DELETE FROM films WHERE film_id = ?";
-    private static final String EXISTS = "SELECT EXISTS(SELECT 1 FROM films WHERE film_id = ?)";
-
-    private final GenreStorage genreStorage;
-    private final DirectorStorage directorStorage;
-
-    public FilmDbStorage(JdbcTemplate jdbcTemplate, FilmRowMapper filmRowMapper,
-                         GenreStorage genreStorage, DirectorStorage directorStorage) {
-        super(jdbcTemplate, filmRowMapper);
-        this.genreStorage = genreStorage;
-        this.directorStorage = directorStorage;
+    @BeforeEach
+    public void setUp() {
+        likeStorage = new LikeDbStorage(jdbcTemplate);
     }
 
-    @Override
-    public Collection<Film> findByDirectorId(Long directorId, String sortBy) {
-        String sql = "likes".equalsIgnoreCase(sortBy)
-                ? FIND_BY_DIRECTOR_SORT_LIKES
-                : FIND_BY_DIRECTOR_SORT_YEAR;
+    @Test
+    public void testCreateFilmWithoutGenres() {
+        Film film = createTestFilm();
+        Film created = filmStorage.create(film);
 
-        List<Film> films = jdbcTemplate.query(sql, rowMapper, directorId);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        return films;
+        assertThat(created.getId()).isNotNull();
+        assertThat(created.getName()).isEqualTo("Test Film");
+        assertThat(created.getGenres()).isEmpty();
     }
 
-    @Override
-    public Collection<Film> findAll() {
-        List<Film> films = queryForList(FIND_ALL);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        return films;
+    @Test
+    public void testFindByIdNotFound() {
+        Optional<Film> found = filmStorage.findById(999L);
+        assertThat(found).isEmpty();
     }
 
-    @Override
-    public Film create(Film film) {
-        Long id = insertAndGetId(INSERT,
-                film.getName(),
-                film.getDescription(),
-                film.getReleaseDate(),
-                film.getDuration(),
-                film.getMpa().getId()
+    @Test
+    public void testFindAll() {
+        filmStorage.create(createTestFilm());
+        filmStorage.create(createTestFilm("Film Two", "Desc Two", LocalDate.of(2023, 1, 1)));
+
+        Collection<Film> films = filmStorage.findAll();
+
+        assertThat(films).hasSize(2);
+        assertThat(films).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Test Film", "Film Two");
+    }
+
+    @Test
+    public void testDelete() {
+        Film film = filmStorage.create(createTestFilm());
+
+        filmStorage.delete(film.getId());
+
+        assertThat(filmStorage.findById(film.getId())).isEmpty();
+    }
+
+    @Test
+    public void testContains() {
+        Film film = filmStorage.create(createTestFilm());
+
+        assertThat(filmStorage.contains(film.getId())).isTrue();
+        assertThat(filmStorage.contains(999L)).isFalse();
+    }
+
+    @Test
+    public void testAddAndRemoveLike() {
+        Film film = filmStorage.create(createTestFilm());
+        User user = createTestUser("liker@test.com", "liker");
+
+        likeStorage.addLike(film.getId(), user.getId());
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
+                Integer.class,
+                film.getId(),
+                user.getId()
         );
-        film.setId(id);
-        return film;
-    }
+        assertThat(count).isEqualTo(1);
 
-    @Override
-    public Film update(Film film) {
-        executeUpdate(UPDATE,
-                film.getName(),
-                film.getDescription(),
-                film.getReleaseDate(),
-                film.getDuration(),
-                film.getMpa().getId(),
-                film.getId()
+        likeStorage.removeLike(film.getId(), user.getId());
+
+        count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM likes WHERE film_id = ? AND user_id = ?",
+                Integer.class,
+                film.getId(),
+                user.getId()
         );
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    public void testGetPopularWithoutFilters() {
+        Film film1 = filmStorage.create(createTestFilm("Film One", "Desc One", LocalDate.of(2022, 1, 1)));
+        Film film2 = filmStorage.create(createTestFilm("Popular Film", "Desc Two", LocalDate.of(2023, 1, 1)));
+
+        User user1 = createTestUser("u1@test.com", "user1");
+        User user2 = createTestUser("u2@test.com", "user2");
+        User user3 = createTestUser("u3@test.com", "user3");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user3.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(2, null, null);
+
+        assertThat(popular).hasSize(2);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Popular Film");
+    }
+
+    @Test
+    public void testGetPopularWithLimit() {
+        for (int i = 0; i < 5; i++) {
+            filmStorage.create(createTestFilm("Film " + i, "Desc " + i, LocalDate.of(2024, 1, 1)));
+        }
+
+        Collection<Film> popular = filmStorage.getPopular(3, null, null);
+
+        assertThat(popular).hasSize(3);
+    }
+
+    @Test
+    public void testGetPopularFilteredByGenre() {
+        Film comedyFilm = filmStorage.create(createTestFilm("Comedy Film", "Funny", LocalDate.of(2024, 1, 1)));
+        Film dramaFilm = filmStorage.create(createTestFilm("Drama Film", "Sad", LocalDate.of(2024, 1, 1)));
+
+        genreStorage.setGenres(comedyFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(dramaFilm.getId(), Set.of(2L));
+
+        User user1 = createTestUser("genre1@test.com", "genre1");
+        User user2 = createTestUser("genre2@test.com", "genre2");
+
+        likeStorage.addLike(comedyFilm.getId(), user1.getId());
+        likeStorage.addLike(dramaFilm.getId(), user1.getId());
+        likeStorage.addLike(dramaFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, null);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Comedy Film");
+    }
+
+    @Test
+    public void testGetPopularFilteredByYear() {
+        Film oldFilm = filmStorage.create(createTestFilm("Old Film", "Old", LocalDate.of(2023, 1, 1)));
+        Film newFilm = filmStorage.create(createTestFilm("New Film", "New", LocalDate.of(2024, 1, 1)));
+
+        User user1 = createTestUser("year1@test.com", "year1");
+        User user2 = createTestUser("year2@test.com", "year2");
+
+        likeStorage.addLike(oldFilm.getId(), user1.getId());
+        likeStorage.addLike(newFilm.getId(), user1.getId());
+        likeStorage.addLike(newFilm.getId(), user2.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, null, 2023);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Old Film");
+    }
+
+    @Test
+    public void testGetPopularFilteredByGenreAndYear() {
+        Film neededFilm = filmStorage.create(createTestFilm("Needed Film", "Target", LocalDate.of(2024, 5, 1)));
+        Film sameGenreOtherYear = filmStorage.create(createTestFilm("Same Genre Other Year", "Other", LocalDate.of(2023, 5, 1)));
+        Film sameYearOtherGenre = filmStorage.create(createTestFilm("Same Year Other Genre", "Other", LocalDate.of(2024, 6, 1)));
+
+        genreStorage.setGenres(neededFilm.getId(), Set.of(1L));
+        genreStorage.setGenres(sameGenreOtherYear.getId(), Set.of(1L));
+        genreStorage.setGenres(sameYearOtherGenre.getId(), Set.of(2L));
+
+        User user1 = createTestUser("both1@test.com", "both1");
+        User user2 = createTestUser("both2@test.com", "both2");
+        User user3 = createTestUser("both3@test.com", "both3");
+
+        likeStorage.addLike(neededFilm.getId(), user1.getId());
+        likeStorage.addLike(neededFilm.getId(), user2.getId());
+        likeStorage.addLike(sameGenreOtherYear.getId(), user3.getId());
+        likeStorage.addLike(sameYearOtherGenre.getId(), user3.getId());
+
+        Collection<Film> popular = filmStorage.getPopular(10, 1L, 2024);
+
+        assertThat(popular).hasSize(1);
+        assertThat(popular.iterator().next().getName()).isEqualTo("Needed Film");
+    }
+
+    private Film createTestFilm() {
+        return createTestFilm("Test Film", "Test Description", LocalDate.of(2024, 1, 1));
+    }
+
+    private Film createTestFilm(String name, String description, LocalDate releaseDate) {
+        Film film = new Film();
+        film.setName(name);
+        film.setDescription(description);
+        film.setReleaseDate(releaseDate);
+        film.setDuration(120);
+        film.setMpa(new Mpa(1L, "G", null));
         return film;
     }
 
-    @Override
-    public Optional<Film> findById(Long id) {
-        Optional<Film> filmOpt = findOptional(FIND_BY_ID, id);
-        filmOpt.ifPresent(film -> {
-            loadGenres(film);
-            loadDirectors(film);
-        });
-        return filmOpt;
+    private Film createAndSaveTestFilm(String name, String description, LocalDate releaseDate) {
+        Film film = createTestFilm(name, description, releaseDate);
+        return filmStorage.create(film);
     }
 
-    @Override
-    public Film delete(Long id) {
-        Film film = findById(id).orElseThrow();
-        executeUpdate(DELETE, id);
-        return film;
+    private User createTestUser(String email, String login) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName(login);
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return userStorage.create(user);
     }
 
-    @Override
-    public Collection<Film> getPopular(int count, Long genreId, Integer year) {
-        StringBuilder sql = new StringBuilder("""
-                SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
-                       f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
-                       COUNT(DISTINCT l.user_id) AS likes_count
-                FROM films f
-                LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
-                LEFT JOIN likes l ON f.film_id = l.film_id
-                """);
+    @Test
+    public void testGetCommonFilms() {
+        User user1 = createTestUser("common1@test.com", "common1");
+        User user2 = createTestUser("common2@test.com", "common2");
 
-        List<Object> params = new ArrayList<>();
+        Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
 
-        // Добавляем связь с жанрами только при фильтрации по жанру
-        if (genreId != null) {
-            sql.append("JOIN film_genres fg ON f.film_id = fg.film_id ");
-        }
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user1.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
 
-        sql.append("WHERE 1 = 1 ");
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
-        // Фильтруем по жанру
-        if (genreId != null) {
-            sql.append("AND fg.genre_id = ? ");
-            params.add(genreId);
-        }
-
-        // Фильтруем по году
-        if (year != null) {
-            sql.append("AND EXTRACT(YEAR FROM f.release_date) = ? ");
-            params.add(year);
-        }
-
-        sql.append("""
-                GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
-                         f.mpa_rating_id, mr.name, mr.description
-                ORDER BY likes_count DESC, f.film_id
-                LIMIT ?
-                """);
-
-        params.add(count);
-
-        List<Film> films = jdbcTemplate.query(sql.toString(), rowMapper, params.toArray());
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        return films;
+        assertThat(commonFilms).hasSize(1);
+        assertThat(commonFilms.iterator().next().getName()).isEqualTo("Film 1");
     }
 
-    @Override
-    public boolean contains(Long id) {
-        return exists(EXISTS, id);
+    @Test
+    public void testGetCommonFilmsSortedByPopularity() {
+        User user1 = createTestUser("userA@test.com", "userA");
+        User user2 = createTestUser("userB@test.com", "userB");
+        User user3 = createTestUser("userC@test.com", "userC");
+        User user4 = createTestUser("userD@test.com", "userD");
+
+        Film film1 = createAndSaveTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
+        Film film3 = createAndSaveTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film1.getId(), user3.getId());
+        likeStorage.addLike(film1.getId(), user4.getId());
+
+        likeStorage.addLike(film2.getId(), user1.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user3.getId());
+
+        likeStorage.addLike(film3.getId(), user1.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
+
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
+
+        assertThat(commonFilms).hasSize(3);
+        List<Film> filmList = new ArrayList<>(commonFilms);
+        assertThat(filmList.get(0).getName()).isEqualTo("Popular Film");
+        assertThat(filmList.get(1).getName()).isEqualTo("Less Popular Film");
+        assertThat(filmList.get(2).getName()).isEqualTo("Least Popular Film");
     }
 
-    @Override
-    public Collection<Film> search(String query, String by) {
-        String searchPattern = "%" + query + "%";
-        List<Film> films;
+    @Test
+    public void testGetCommonFilmsEmptyResult() {
+        User user1 = createTestUser("userX@test.com", "userX");
+        User user2 = createTestUser("userY@test.com", "userY");
 
-        if (by == null || by.isBlank()) {
-            return List.of();
-        }
+        Film film1 = createAndSaveTestFilm("Film X", "Desc X", LocalDate.of(2023, 1, 1));
+        Film film2 = createAndSaveTestFilm("Film Y", "Desc Y", LocalDate.of(2023, 2, 1));
 
-        String[] searchBy = by.toLowerCase().split(",");
-        boolean searchByTitle = false;
-        boolean searchByDirector = false;
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
 
-        for (String s : searchBy) {
-            String trimmed = s.trim();
-            if ("title".equals(trimmed)) {
-                searchByTitle = true;
-            } else if ("director".equals(trimmed)) {
-                searchByDirector = true;
-            }
-        }
+        Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
-        if (searchByTitle && searchByDirector) {
-            films = jdbcTemplate.query(SEARCH_BY_TITLE_AND_DIRECTOR, rowMapper, searchPattern, searchPattern);
-        } else if (searchByTitle) {
-            films = jdbcTemplate.query(SEARCH_BY_TITLE, rowMapper, searchPattern);
-        } else if (searchByDirector) {
-            films = jdbcTemplate.query(SEARCH_BY_DIRECTOR, rowMapper, searchPattern);
-        } else {
-            return List.of();
-        }
-
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-
-        return films;
-    }
-
-    @Override
-    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
-        List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        return films;
-    }
-
-    @Override
-    public Collection<Film> getRecommendations(Long userId) {
-        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, rowMapper, userId, userId, userId);
-        loadGenresForFilms(films);
-        loadDirectorsForFilms(films);
-        return films;
-    }
-
-    private void loadGenres(Film film) {
-        Set<Genre> genres = genreStorage.getGenresByFilmId(film.getId());
-        film.setGenres(genres);
-    }
-
-    private void loadGenresForFilms(List<Film> films) {
-        for (Film film : films) {
-            loadGenres(film);
-        }
-    }
-
-    private void loadDirectors(Film film) {
-        Set<Director> directors = directorStorage.getDirectorsByFilmId(film.getId());
-        film.setDirectors(directors);
-    }
-
-    private void loadDirectorsForFilms(List<Film> films) {
-        for (Film film : films) {
-            loadDirectors(film);
-        }
+        assertThat(commonFilms).isEmpty();
     }
 }
