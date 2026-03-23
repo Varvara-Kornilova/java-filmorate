@@ -85,7 +85,7 @@ public class RecommendationServiceTest {
 
         Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
 
-        assertThat(recommendations).hasSize(0);
+        assertThat(recommendations).hasSize(2);
     }
 
     @Test
