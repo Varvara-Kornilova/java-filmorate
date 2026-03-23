@@ -43,6 +43,7 @@ public class RecommendationServiceTest {
     private RecommendationService recommendationService;
     private UserStorage userStorage;
     private FilmStorage filmStorage;
+    private LikeDbStorage likeStorage;
 
     @BeforeEach
     public void setUp() {
@@ -62,7 +63,7 @@ public class RecommendationServiceTest {
         GenreStorage genreStorage = new GenreDbStorage(jdbcTemplate, genreRowMapper);
         DirectorStorage directorStorage = new DirectorDbStorage(jdbcTemplate, directorRowMapper);
         filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage, directorStorage);
-        LikeDbStorage likeStorage = new LikeDbStorage(jdbcTemplate);
+        likeStorage = new LikeDbStorage(jdbcTemplate);
 
         recommendationService = new RecommendationService(likeStorage, filmStorage);
     }
@@ -77,23 +78,146 @@ public class RecommendationServiceTest {
         Film film2 = createTestFilm("Film 2");
         Film film3 = createTestFilm("Film 3");
 
-        filmStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film1.getId(), user1.getId());
 
-        filmStorage.addLike(film1.getId(), user2.getId());
-        filmStorage.addLike(film2.getId(), user2.getId());
-        filmStorage.addLike(film3.getId(), user2.getId());
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
 
         Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
 
         assertThat(recommendations).hasSize(2);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film 2", "Film 3");
     }
 
     @Test
     public void getRecommendations_ShouldReturnEmptyForUserWithNoLikes() {
 
-        User userNoLikes = createTestUser("noLikes@test.com", "noLikes");
+        User user = createTestUser("noLikes@test.com", "noLikes");
 
-        Collection<Film> recommendations = recommendationService.getRecommendations(userNoLikes.getId());
+        Collection<Film> recommendations = recommendationService.getRecommendations(user.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnEmptyForUserWithLikesButNoSimilarUser() {
+        User user1 = createTestUser("userA@test.com", "userA");
+        User user2 = createTestUser("userB@test.com", "userB");
+
+        Film film1 = createTestFilm("Film A");
+        Film film2 = createTestFilm("Film B");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+
+        likeStorage.addLike(film2.getId(), user2.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnEmptyWhenAllFilmsAlreadyLiked() {
+        User user1 = createTestUser("userC@test.com", "userC");
+        User user2 = createTestUser("userD@test.com", "userD");
+
+        Film film1 = createTestFilm("Film X");
+        Film film2 = createTestFilm("Film Y");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film2.getId(), user1.getId());
+
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void getRecommendations_ShouldReturnMostSimilarUserRecommendations() {
+        User user1 = createTestUser("userE@test.com", "userE");
+        User user2 = createTestUser("userF@test.com", "userF");
+        User user3 = createTestUser("userG@test.com", "userG");
+
+        Film film1 = createTestFilm("Film 1");
+        Film film2 = createTestFilm("Film 2");
+        Film film3 = createTestFilm("Film 3");
+        Film film4 = createTestFilm("Film 4");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
+
+        likeStorage.addLike(film1.getId(), user3.getId());
+        likeStorage.addLike(film4.getId(), user3.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).hasSize(2);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film 2", "Film 3");
+    }
+
+    @Test
+    public void getRecommendations_ShouldNotRecommendAlreadyLikedFilms() {
+        User user1 = createTestUser("userH@test.com", "userH");
+        User user2 = createTestUser("userI@test.com", "userI");
+
+        Film film1 = createTestFilm("Film Alpha");
+        Film film2 = createTestFilm("Film Beta");
+        Film film3 = createTestFilm("Film Gamma");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+        likeStorage.addLike(film2.getId(), user1.getId());
+
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).hasSize(1);
+        assertThat(recommendations.iterator().next().getName()).isEqualTo("Film Gamma");
+    }
+
+    @Test
+    public void getRecommendations_ShouldHandleMultipleRecommendations() {
+        User user1 = createTestUser("userJ@test.com", "userJ");
+        User user2 = createTestUser("userK@test.com", "userK");
+
+        Film film1 = createTestFilm("Film One");
+        Film film2 = createTestFilm("Film Two");
+        Film film3 = createTestFilm("Film Three");
+        Film film4 = createTestFilm("Film Four");
+        Film film5 = createTestFilm("Film Five");
+
+        likeStorage.addLike(film1.getId(), user1.getId());
+
+        likeStorage.addLike(film1.getId(), user2.getId());
+        likeStorage.addLike(film2.getId(), user2.getId());
+        likeStorage.addLike(film3.getId(), user2.getId());
+        likeStorage.addLike(film4.getId(), user2.getId());
+        likeStorage.addLike(film5.getId(), user2.getId());
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user1.getId());
+
+        assertThat(recommendations).hasSize(4);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film Two", "Film Three", "Film Four", "Film Five");
+    }
+
+    @Test
+    public void getRecommendations_ShouldWorkWithEmptyDatabase() {
+
+        User user = createTestUser("empty@test.com", "empty");
+
+        Collection<Film> recommendations = recommendationService.getRecommendations(user.getId());
 
         assertThat(recommendations).isEmpty();
     }
