@@ -8,6 +8,7 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.EventOperation;
 import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -114,6 +115,16 @@ public class UserService {
     public Collection<User> getMutualFriends(Long userId, Long otherUserId) {
         validateUsersExist(userId, otherUserId);
         return friendshipStorage.getCommonFriends(userId, otherUserId);
+    }
+
+    public Collection<Film> getRecommendations(Long userId) {
+        getUserById(userId);
+
+        Collection<Film> recommendations = userStorage.getRecommendations(userId);
+
+        log.info("Найдено {} рекомендаций для пользователя {}", recommendations.size(), userId);
+
+        return recommendations;
     }
 
     private void validateUsersExist(Long userId, Long friendId) {
