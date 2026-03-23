@@ -43,7 +43,7 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
                 SELECT film_id FROM likes WHERE user_id = ?
             ),
             other_users_overlap AS (
-                SELECT 
+                SELECT
                     l.user_id AS other_user_id,
                     COUNT(l.film_id) AS overlap_count
                 FROM likes l
