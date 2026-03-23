@@ -43,7 +43,7 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
                 SELECT film_id FROM likes WHERE user_id = ?
             ),
             other_users_overlap AS (
-                SELECT
+                SELECT 
                     l.user_id AS other_user_id,
                     COUNT(l.film_id) AS overlap_count
                 FROM likes l
@@ -52,7 +52,7 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
                 GROUP BY l.user_id
                 HAVING COUNT(l.film_id) > 0
                 ORDER BY overlap_count DESC
-                LIMIT 1
+                FETCH FIRST 1 ROWS ONLY
             ),
             similar_user_films AS (
                 SELECT DISTINCT l.film_id
