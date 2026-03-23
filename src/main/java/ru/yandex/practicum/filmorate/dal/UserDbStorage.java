@@ -39,34 +39,31 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
     private static final String EXISTS = "SELECT EXISTS(SELECT 1 FROM users WHERE user_id = ?)";
 
     private static final String GET_RECOMMENDATIONS = """
-            WITH user_likes AS (
-                SELECT film_id FROM likes WHERE user_id = ?
-            ),
-            other_users_overlap AS (
-                SELECT
-                    l.user_id AS other_user_id,
-                    COUNT(l.film_id) AS overlap_count
-                FROM likes l
-                WHERE l.user_id != ?
-                  AND l.film_id IN (SELECT film_id FROM user_likes)
-                GROUP BY l.user_id
-                HAVING COUNT(l.film_id) > 0
-                ORDER BY overlap_count DESC
-                FETCH FIRST 1 ROWS ONLY
-            ),
-            similar_user_films AS (
-                SELECT DISTINCT l.film_id
-                FROM likes l
-                WHERE l.user_id = (SELECT other_user_id FROM other_users_overlap)
-                  AND l.film_id NOT IN (SELECT film_id FROM user_likes)
-            )
             SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
                    f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
                    COUNT(DISTINCT l2.user_id) AS likes_count
             FROM films f
             LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
             LEFT JOIN likes l2 ON f.film_id = l2.film_id
-            WHERE f.film_id IN (SELECT film_id FROM similar_user_films)
+            WHERE f.film_id IN (
+                SELECT DISTINCT l.film_id
+                FROM likes l
+                WHERE l.user_id = (
+                    SELECT other_user_id FROM (
+                        SELECT
+                            l.user_id AS other_user_id,
+                            COUNT(l.film_id) AS overlap_count
+                        FROM likes l
+                        WHERE l.user_id != ?
+                          AND l.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
+                        GROUP BY l.user_id
+                        HAVING COUNT(l.film_id) > 0
+                        ORDER BY overlap_count DESC
+                        LIMIT 1
+                    )
+                )
+                AND l.film_id NOT IN (SELECT film_id FROM likes WHERE user_id = ?)
+            )
             GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
                      f.mpa_rating_id, mr.name, mr.description
             ORDER BY likes_count DESC, f.film_id
