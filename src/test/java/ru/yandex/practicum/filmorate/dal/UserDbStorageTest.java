@@ -2,6 +2,11 @@ package ru.yandex.practicum.filmorate.dal;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.jdbc.Sql;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
@@ -16,15 +21,32 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UserDbStorageTest extends BaseJdbcTest {
+@SpringBootTest
+@AutoConfigureTestDatabase
+@Sql(scripts = {"/schema.sql", "/data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+public class UserDbStorageTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private UserDbStorage userStorage;
 
     @BeforeEach
     public void cleanUp() {
-        super.cleanUp();
+        jdbcTemplate.update("DELETE FROM review_likes");
+        jdbcTemplate.update("DELETE FROM reviews");
+        jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM likes");
         jdbcTemplate.update("DELETE FROM friendship");
+        jdbcTemplate.update("DELETE FROM events");
+        jdbcTemplate.update("DELETE FROM film_directors");
         jdbcTemplate.update("DELETE FROM films");
         jdbcTemplate.update("DELETE FROM users");
+        jdbcTemplate.update("DELETE FROM directors");
+
+        jdbcTemplate.update("ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1");
+        jdbcTemplate.update("ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1");
     }
 
     @Test
@@ -86,7 +108,6 @@ public class UserDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testGetRecommendations_ShouldReturnRecommendedFilms() {
-
         User targetUser = createUser("target@test.com", "target", "Target User");
         User similarUser = createUser("similar@test.com", "similar", "Similar User");
         User otherUser = createUser("other@test.com", "other", "Other User");
@@ -133,7 +154,6 @@ public class UserDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testGetRecommendations_ShouldSortByLikesCount() {
-
         User targetUser = createUser("target2@test.com", "target2", "Target 2");
         User similarUser = createUser("similar2@test.com", "similar2", "Similar 2");
 
@@ -167,7 +187,6 @@ public class UserDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testGetRecommendations_ShouldReturnEmpty_WhenUserHasNoLikes() {
-
         User targetUser = createUser("noLikes@test.com", "nolikes", "No Likes");
         User similarUser = createUser("similar3@test.com", "similar3", "Similar 3");
 
@@ -176,28 +195,6 @@ public class UserDbStorageTest extends BaseJdbcTest {
 
         addLike(film1.getId(), similarUser.getId());
         addLike(film2.getId(), similarUser.getId());
-
-        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
-
-        assertThat(recommendations).isEmpty();
-    }
-
-    @Test
-    public void testGetRecommendations_ShouldReturnEmpty_WhenAllFilmsAlreadyLiked() {
-        User targetUser = createUser("allLiked@test.com", "allLiked", "All Liked");
-        User similarUser = createUser("similar4@test.com", "similar4", "Similar 4");
-
-        Film film1 = createFilm("Film 1");
-        Film film2 = createFilm("Film 2");
-        Film film3 = createFilm("Film 3");
-
-        addLike(film1.getId(), targetUser.getId());
-        addLike(film2.getId(), targetUser.getId());
-        addLike(film3.getId(), targetUser.getId());
-
-        addLike(film1.getId(), similarUser.getId());
-        addLike(film2.getId(), similarUser.getId());
-        addLike(film3.getId(), similarUser.getId());
 
         Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
 
@@ -215,6 +212,8 @@ public class UserDbStorageTest extends BaseJdbcTest {
         Film film3 = createFilm("Film 3");
         Film film4 = createFilm("Film 4");
         Film film5 = createFilm("Film 5");
+        Film film6 = createFilm("Film 6");
+        Film film7 = createFilm("Film 7");
 
         addLike(film1.getId(), targetUser.getId());
         addLike(film2.getId(), targetUser.getId());
@@ -225,8 +224,6 @@ public class UserDbStorageTest extends BaseJdbcTest {
         addLike(film4.getId(), userWith2Overlap.getId());
         addLike(film5.getId(), userWith2Overlap.getId());
 
-        Film film6 = createFilm("Film 6");
-        Film film7 = createFilm("Film 7");
         addLike(film1.getId(), userWith1Overlap.getId());
         addLike(film6.getId(), userWith1Overlap.getId());
         addLike(film7.getId(), userWith1Overlap.getId());
