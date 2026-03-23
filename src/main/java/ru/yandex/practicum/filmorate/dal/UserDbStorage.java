@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
@@ -130,7 +131,63 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
 
     @Override
     public Collection<Film> getRecommendations(Long userId) {
-        List<Film> films = jdbcTemplate.query(GET_RECOMMENDATIONS, filmRowMapper, userId, userId);
+
+        Set<Long> userLikedFilms = new HashSet<>(jdbcTemplate.queryForList(
+            "SELECT film_id FROM likes WHERE user_id = ?", Long.class, userId));
+
+        if (userLikedFilms.isEmpty()) {
+            return List.of();
+        }
+
+        String findSimilarUserSql = """
+            SELECT l.user_id
+            FROM likes l
+            WHERE l.user_id != ?
+              AND l.film_id IN (SELECT film_id FROM likes WHERE user_id = ?)
+            GROUP BY l.user_id
+            ORDER BY COUNT(l.film_id) DESC
+            LIMIT 1
+            """;
+
+        List<Long> similarUsers = jdbcTemplate.queryForList(
+            findSimilarUserSql, Long.class, userId, userId);
+
+        if (similarUsers.isEmpty()) {
+            return List.of();
+        }
+
+        Long similarUserId = similarUsers.get(0);
+
+        Set<Long> similarUserFilms = new HashSet<>(jdbcTemplate.queryForList(
+            "SELECT film_id FROM likes WHERE user_id = ?", Long.class, similarUserId));
+
+        similarUserFilms.removeAll(userLikedFilms);
+
+        if (similarUserFilms.isEmpty()) {
+            return List.of();
+        }
+
+        String placeholders = similarUserFilms.stream()
+            .map(f -> "?")
+            .collect(Collectors.joining(","));
+
+        String getFilmsSql = String.format("""
+            SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
+                   f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
+                   COUNT(DISTINCT l.user_id) AS likes_count
+            FROM films f
+            LEFT JOIN mpa_rating mr ON f.mpa_rating_id = mr.rating_id
+            LEFT JOIN likes l ON f.film_id = l.film_id
+            WHERE f.film_id IN (%s)
+            GROUP BY f.film_id, f.name, f.description, f.release_date, f.duration,
+                     f.mpa_rating_id, mr.name, mr.description
+            ORDER BY likes_count DESC, f.film_id
+            """, placeholders);
+
+        List<Film> films = jdbcTemplate.query(
+            getFilmsSql,
+            filmRowMapper,
+            similarUserFilms.toArray());
 
         for (Film film : films) {
             loadGenresForFilm(film);
@@ -142,18 +199,26 @@ public class UserDbStorage extends BaseDbStorage<User> implements UserStorage {
     }
 
     private void loadGenresForFilm(Film film) {
-        Set<Genre> genres = genreStorage.getGenresByFilmId(film.getId());
-        film.setGenres(genres);
+        try {
+            Set<Genre> genres = genreStorage.getGenresByFilmId(film.getId());
+            film.setGenres(genres != null ? genres : new HashSet<>());
+        } catch (Exception e) {
+            film.setGenres(new HashSet<>());
+        }
     }
 
     private void loadDirectorsForFilm(Film film) {
-        Set<Director> directors = directorStorage.getDirectorsByFilmId(film.getId());
-        film.setDirectors(directors);
+        try {
+            Set<Director> directors = directorStorage.getDirectorsByFilmId(film.getId());
+            film.setDirectors(directors != null ? directors : new HashSet<>());
+        } catch (Exception e) {
+            film.setDirectors(new HashSet<>());
+        }
     }
 
     private void loadLikesForFilm(Film film) {
-        String sql = "SELECT user_id FROM likes WHERE film_id = ?";
-        List<Long> likeUserIds = jdbcTemplate.queryForList(sql, Long.class, film.getId());
+        List<Long> likeUserIds = jdbcTemplate.queryForList(
+            "SELECT user_id FROM likes WHERE film_id = ?", Long.class, film.getId());
         film.setLikes(new HashSet<>(likeUserIds));
     }
 }
