@@ -34,7 +34,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
     public void setUp() {
         cleanUp();
 
-        userStorageWithFilms = new UserDbStorage(jdbcTemplate, userRowMapper, 
+        userStorageWithFilms = new UserDbStorage(jdbcTemplate, userRowMapper,
                                                   filmRowMapper, genreStorage, directorStorage);
     }
 
@@ -230,7 +230,7 @@ public class UserDbStorageTest extends BaseJdbcTest {
         film.setMpa(new Mpa(1L, "G", null));
 
         String sql = "INSERT INTO films (name, description, release_date, duration, mpa_rating_id) VALUES (?, ?, ?, ?, ?)";
-        jdbcTemplate.update(sql, film.getName(), film.getDescription(), film.getReleaseDate(), 
+        jdbcTemplate.update(sql, film.getName(), film.getDescription(), film.getReleaseDate(),
                             film.getDuration(), film.getMpa().getId());
 
         Long id = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
