@@ -18,6 +18,7 @@ import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.genre.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
 import ru.yandex.practicum.filmorate.service.recommendation.RecommendationService;
 
 import java.time.LocalDate;
@@ -44,6 +45,7 @@ public class FilmService {
     private final GenreStorage genreStorage;
     private final EventService eventService;
     private final RecommendationService recommendationService;
+    private final LikeStorage likeStorage;
 
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
@@ -53,7 +55,8 @@ public class FilmService {
                        DirectorStorage directorStorage,
                        GenreStorage genreStorage,
                        EventService eventService,
-                       RecommendationService recommendationService) {
+                       RecommendationService recommendationService,
+                       LikeStorage likeStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.mpaService = mpaService;
@@ -63,6 +66,7 @@ public class FilmService {
         this.genreStorage = genreStorage;
         this.eventService = eventService;
         this.recommendationService = recommendationService;
+        this.likeStorage = likeStorage;
     }
 
     public Collection<Film> getRecommendations(Long userId) {
@@ -169,19 +173,20 @@ public class FilmService {
 
     public void likeFilm(Long filmId, Long userId) {
         validateFilmAndUser(filmId, userId);
-        filmStorage.addLike(filmId, userId);
-        log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
 
-        // записываем событие добавления лайка
+        if (likeStorage.hasLike(filmId, userId)) {
+            throw new ValidationException("Пользователь уже поставил лайк этому фильму");
+        }
+
+        likeStorage.addLike(filmId, userId);
+        log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
         eventService.addEvent(userId, EventType.LIKE, EventOperation.ADD, filmId);
     }
 
     public void unlikeFilm(Long filmId, Long userId) {
         validateFilmAndUser(filmId, userId);
-        filmStorage.removeLike(filmId, userId);
+        likeStorage.removeLike(filmId, userId);
         log.info("Пользователь {} удалил лайк у фильма {}", userId, filmId);
-
-        // записываем событие удаления лайка
         eventService.addEvent(userId, EventType.LIKE, EventOperation.REMOVE, filmId);
     }
 
