@@ -3,6 +3,8 @@ package ru.yandex.practicum.filmorate.controller;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Event;
@@ -28,67 +30,72 @@ public class UserController {
     private final EventService eventService;
 
     @GetMapping
-    public Collection<User> listAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<Collection<User>> listAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/{id}")
-    public User fetchUserById(@PathVariable @Positive(message = "Идентификатор пользователя должен быть положительным") Long id) {
-        return userService.getUserById(id);
+    public ResponseEntity<User> fetchUserById(
+            @PathVariable @Positive(message = "Идентификатор пользователя должен быть положительным") Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<User> listUserFriends(@PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
-        return userService.getFriendsList(id);
+    public ResponseEntity<Collection<User>> listUserFriends(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
+        return ResponseEntity.ok(userService.getFriendsList(id));
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Collection<User> listMutualFriends(
+    public ResponseEntity<Collection<User>> listMutualFriends(
             @PathVariable @Positive(message = "ID первого пользователя должен быть положительным") Long id,
             @PathVariable @Positive(message = "ID второго пользователя должен быть положительным") Long otherId) {
-        return userService.getMutualFriends(id, otherId);
+        return ResponseEntity.ok(userService.getMutualFriends(id, otherId));
     }
 
     @GetMapping("/{id}/feed")
-    public List<Event> getUserFeed(
+    public ResponseEntity<List<Event>> getUserFeed(
             @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
-        return eventService.getUserFeed(id);
+        return ResponseEntity.ok(eventService.getUserFeed(id));
     }
 
     @GetMapping("/{id}/recommendations")
-    public Collection<Film> getRecommendations(
+    public ResponseEntity<Collection<Film>> getRecommendations(
             @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
-        return userService.getRecommendations(id);
+        return ResponseEntity.ok(userService.getRecommendations(id));
     }
 
     @PostMapping
-    public User registerNewUser(@Valid @RequestBody User user) {
-        return userService.registerUser(user);
+    public ResponseEntity<User> registerNewUser(@Valid @RequestBody User user) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(userService.registerUser(user));
     }
 
     @PutMapping
-    public User modifyUserProfile(@Valid @RequestBody User updatedUser) {
-        return userService.modifyUser(updatedUser);
+    public ResponseEntity<User> modifyUserProfile(@Valid @RequestBody User updatedUser) {
+        return ResponseEntity.ok(userService.modifyUser(updatedUser));
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public User initiateFriendship(
+    public ResponseEntity<User> initiateFriendship(
             @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id,
             @PathVariable @Positive(message = "ID друга должен быть положительным") Long friendId) {
         userService.sendFriendRequest(id, friendId);
-        return userService.getUserById(id);
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public User terminateFriendship(
+    public ResponseEntity<User> terminateFriendship(
             @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id,
             @PathVariable @Positive(message = "ID друга должен быть положительным") Long friendId) {
         userService.removeFriend(id, friendId);
-        return userService.getUserById(id);
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable @Positive(message = "ID должен быть положительным") Long id) {
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable @Positive(message = "ID должен быть положительным") Long id) {
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }

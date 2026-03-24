@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface EventStorage {
 
-    Event create(Event event); // Сохраняем новое событие
+    Event create(Event event);
 
-    List<Event> getUserFeed(Long userId); // Получаем ленту событий пользователя
+    List<Event> getUserFeed(Long userId);
 }

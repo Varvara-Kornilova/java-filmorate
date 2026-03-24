@@ -8,7 +8,6 @@ public class EventModelTests {
 
     @Test
     public void testEventBuilderCreatesCorrectObject() {
-        // создаем событие через builder
         Event event = Event.builder()
                 .eventId(1L)
                 .timestamp(123456789L)
@@ -18,7 +17,6 @@ public class EventModelTests {
                 .entityId(20L)
                 .build();
 
-        // проверяем, что все поля сохранились правильно
         assertThat(event.getEventId()).isEqualTo(1L);
         assertThat(event.getTimestamp()).isEqualTo(123456789L);
         assertThat(event.getUserId()).isEqualTo(10L);
@@ -29,7 +27,6 @@ public class EventModelTests {
 
     @Test
     public void testReviewEventBuilderCreatesCorrectObject() {
-        // создаем событие отзыва через builder
         Event event = Event.builder()
                 .eventId(2L)
                 .timestamp(555555555L)
@@ -39,7 +36,6 @@ public class EventModelTests {
                 .entityId(40L)
                 .build();
 
-        // проверяем, что review-событие сохранилось правильно
         assertThat(event.getEventId()).isEqualTo(2L);
         assertThat(event.getTimestamp()).isEqualTo(555555555L);
         assertThat(event.getUserId()).isEqualTo(30L);
@@ -50,7 +46,6 @@ public class EventModelTests {
 
     @Test
     public void testEventTypeContainsExpectedValues() {
-        // проверяем, что enum типов событий содержит нужные значения
         assertThat(EventType.valueOf("LIKE")).isEqualTo(EventType.LIKE);
         assertThat(EventType.valueOf("FRIEND")).isEqualTo(EventType.FRIEND);
         assertThat(EventType.valueOf("REVIEW")).isEqualTo(EventType.REVIEW);
@@ -58,7 +53,6 @@ public class EventModelTests {
 
     @Test
     public void testEventOperationContainsExpectedValues() {
-        // проверяем, что enum операций содержит нужные значения
         assertThat(EventOperation.valueOf("ADD")).isEqualTo(EventOperation.ADD);
         assertThat(EventOperation.valueOf("REMOVE")).isEqualTo(EventOperation.REMOVE);
         assertThat(EventOperation.valueOf("UPDATE")).isEqualTo(EventOperation.UPDATE);
@@ -66,7 +60,6 @@ public class EventModelTests {
 
     @Test
     public void testNoArgsConstructorAndSetters() {
-        // создаем пустой объект и заполняем его через сеттеры
         Event event = new Event();
         event.setEventId(3L);
         event.setTimestamp(987654321L);
@@ -75,7 +68,6 @@ public class EventModelTests {
         event.setOperation(EventOperation.REMOVE);
         event.setEntityId(25L);
 
-        // проверяем, что сеттеры отработали правильно
         assertThat(event.getEventId()).isEqualTo(3L);
         assertThat(event.getTimestamp()).isEqualTo(987654321L);
         assertThat(event.getUserId()).isEqualTo(15L);

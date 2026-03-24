@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.service.genre.GenreService;
@@ -20,12 +21,13 @@ public class GenreController {
     private final GenreService genreService;
 
     @GetMapping
-    public Collection<Genre> retrieveAllGenres() {
-        return genreService.getAllGenres();
+    public ResponseEntity<Collection<Genre>> retrieveAllGenres() {
+        return ResponseEntity.ok(genreService.getAllGenres());
     }
 
     @GetMapping("/{id}")
-    public Genre retrieveGenreById(@PathVariable @Positive(message = "Идентификатор должен быть положительным числом") Long id) {
-        return genreService.getGenreById(id);
+    public ResponseEntity<Genre> retrieveGenreById(
+            @PathVariable @Positive(message = "Идентификатор должен быть положительным числом") Long id) {
+        return ResponseEntity.ok(genreService.getGenreById(id));
     }
 }

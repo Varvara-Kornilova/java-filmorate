@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Event {
 
-    private Long eventId; // id события
-    private Long timestamp; // время события
-    private Long userId; // кто совершил действие
-    private EventType eventType; // тип события
-    private EventOperation operation; // тип операции
-    private Long entityId; // id сущности (фильм, пользователь и тд)
+    private Long eventId;
+    private Long timestamp;
+    private Long userId;
+    private EventType eventType;
+    private EventOperation operation;
+    private Long entityId;
 }

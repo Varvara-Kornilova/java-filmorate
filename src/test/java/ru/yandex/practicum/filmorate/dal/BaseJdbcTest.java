@@ -51,7 +51,6 @@ public abstract class BaseJdbcTest {
 
     @BeforeEach
     void cleanUp() {
-        // Порядок важен из-за внешних ключей!
         jdbcTemplate.update("DELETE FROM film_directors");
         jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM likes");

@@ -122,7 +122,6 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         Film comedyFilm = filmStorage.create(createTestFilm("Comedy Film", "Funny", LocalDate.of(2024, 1, 1)));
         Film dramaFilm = filmStorage.create(createTestFilm("Drama Film", "Sad", LocalDate.of(2024, 1, 1)));
 
-        // Привязываем жанры к фильмам
         genreStorage.setGenres(comedyFilm.getId(), Set.of(1L));
         genreStorage.setGenres(dramaFilm.getId(), Set.of(2L));
 
@@ -163,7 +162,6 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         Film sameGenreOtherYear = filmStorage.create(createTestFilm("Same Genre Other Year", "Other", LocalDate.of(2023, 5, 1)));
         Film sameYearOtherGenre = filmStorage.create(createTestFilm("Same Year Other Genre", "Other", LocalDate.of(2024, 6, 1)));
 
-        // Привязываем жанры к фильмам
         genreStorage.setGenres(neededFilm.getId(), Set.of(1L));
         genreStorage.setGenres(sameGenreOtherYear.getId(), Set.of(1L));
         genreStorage.setGenres(sameYearOtherGenre.getId(), Set.of(2L));
@@ -194,10 +192,9 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         film.setReleaseDate(releaseDate);
         film.setDuration(120);
         film.setMpa(new Mpa(1L, "G", null));
-        return film;  // НЕ сохраняем в БД - для существующих тестов
+        return film;
     }
 
-    // НОВЫЙ МЕТОД - сохраняет фильм в БД для новых тестов
     private Film createAndSaveTestFilm(String name, String description, LocalDate releaseDate) {
         Film film = createTestFilm(name, description, releaseDate);
         return filmStorage.create(film);
@@ -212,25 +209,20 @@ public class FilmDbStorageTest extends BaseJdbcTest {
         return userStorage.create(user);
     }
 
-    // НОВЫЕ ТЕСТЫ ДЛЯ COMMON FILMS
     @Test
     public void testGetCommonFilms() {
-        // Создаём пользователей
         User user1 = createTestUser("common1@test.com", "common1");
         User user2 = createTestUser("common2@test.com", "common2");
 
-        // Создаём фильмы (сохраняем в БД)
         Film film1 = createAndSaveTestFilm("Film 1", "Desc 1", LocalDate.of(2023, 1, 1));
         Film film2 = createAndSaveTestFilm("Film 2", "Desc 2", LocalDate.of(2023, 2, 1));
         Film film3 = createAndSaveTestFilm("Film 3", "Desc 3", LocalDate.of(2023, 3, 1));
 
-        // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film1.getId(), user2.getId());
         filmStorage.addLike(film2.getId(), user1.getId());
         filmStorage.addLike(film3.getId(), user2.getId());
 
-        // Получаем общие фильмы
         Collection<Film> commonFilms = filmStorage.getCommonFilms(user1.getId(), user2.getId());
 
         assertThat(commonFilms).hasSize(1);
@@ -239,18 +231,15 @@ public class FilmDbStorageTest extends BaseJdbcTest {
 
     @Test
     public void testGetCommonFilmsSortedByPopularity() {
-        // Создаём пользователей
         User user1 = createTestUser("userA@test.com", "userA");
         User user2 = createTestUser("userB@test.com", "userB");
         User user3 = createTestUser("userC@test.com", "userC");
         User user4 = createTestUser("userD@test.com", "userD");
 
-        // Создаём фильмы (сохраняем в БД)
         Film film1 = createAndSaveTestFilm("Popular Film", "Desc 1", LocalDate.of(2023, 1, 1));
         Film film2 = createAndSaveTestFilm("Less Popular Film", "Desc 2", LocalDate.of(2023, 2, 1));
         Film film3 = createAndSaveTestFilm("Least Popular Film", "Desc 3", LocalDate.of(2023, 3, 1));
 
-        // Добавляем лайки
         filmStorage.addLike(film1.getId(), user1.getId());
         filmStorage.addLike(film1.getId(), user2.getId());
         filmStorage.addLike(film1.getId(), user3.getId());

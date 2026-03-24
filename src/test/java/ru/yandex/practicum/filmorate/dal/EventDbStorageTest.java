@@ -34,17 +34,14 @@ public class EventDbStorageTest {
 
     @BeforeEach
     public void cleanUp() {
-        // очищаем таблицы перед каждым тестом
         jdbcTemplate.update("DELETE FROM events");
         jdbcTemplate.update("DELETE FROM users");
     }
 
     @Test
     public void testCreateEvent() {
-        // создаем пользователя
         Long userId = createTestUser("test@test.com", "test");
 
-        // создаем событие
         Event event = Event.builder()
                 .timestamp(System.currentTimeMillis())
                 .userId(userId)
@@ -53,13 +50,10 @@ public class EventDbStorageTest {
                 .entityId(1L)
                 .build();
 
-        // сохраняем событие
         Event created = eventStorage.create(event);
 
-        // проверяем, что id события появился
         assertThat(created.getEventId()).isNotNull();
 
-        // проверяем, что запись действительно появилась в базе
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM events WHERE user_id = ?",
                 Integer.class,
@@ -71,42 +65,31 @@ public class EventDbStorageTest {
 
     @Test
     public void testGetUserFeed() {
-        // создаем пользователя
         Long userId = createTestUser("feed@test.com", "feed");
 
-        // добавляем несколько событий
         eventStorage.create(createEvent(userId, EventType.LIKE, EventOperation.ADD, 1L));
         eventStorage.create(createEvent(userId, EventType.FRIEND, EventOperation.ADD, 2L));
 
-        // получаем ленту
         List<Event> feed = eventStorage.getUserFeed(userId);
 
-        // проверяем количество событий
         assertThat(feed).hasSize(2);
 
-        // проверяем, что события пришли в правильном порядке
         assertThat(feed).extracting("eventType")
                 .containsExactly(EventType.LIKE, EventType.FRIEND);
     }
 
     @Test
     public void testFeedSortedByTimestamp() throws InterruptedException {
-        // создаем пользователя
         Long userId = createTestUser("sort@test.com", "sort");
 
-        // создаем первое событие
         Event first = eventStorage.create(createEvent(userId, EventType.LIKE, EventOperation.ADD, 1L));
 
-        // делаем небольшую паузу, чтобы timestamp отличался
         Thread.sleep(5);
 
-        // создаем второе событие
         Event second = eventStorage.create(createEvent(userId, EventType.FRIEND, EventOperation.ADD, 2L));
 
-        // получаем ленту
         List<Event> feed = eventStorage.getUserFeed(userId);
 
-        // проверяем порядок событий по времени
         assertThat(feed).hasSize(2);
         assertThat(feed.get(0).getEventId()).isEqualTo(first.getEventId());
         assertThat(feed.get(1).getEventId()).isEqualTo(second.getEventId());
@@ -114,31 +97,23 @@ public class EventDbStorageTest {
 
     @Test
     public void testEmptyFeed() {
-        // создаем пользователя без событий
         Long userId = createTestUser("empty@test.com", "empty");
 
-        // получаем ленту
         List<Event> feed = eventStorage.getUserFeed(userId);
 
-        // проверяем, что лента пустая
         assertThat(feed).isEmpty();
     }
 
     @Test
     public void testCreateReviewEvent() {
-        // создаем пользователя
         Long userId = createTestUser("review@test.com", "review");
 
-        // создаем событие отзыва
         Event event = createEvent(userId, EventType.REVIEW, EventOperation.ADD, 10L);
 
-        // сохраняем событие
         Event created = eventStorage.create(event);
 
-        // получаем ленту пользователя
         List<Event> feed = eventStorage.getUserFeed(userId);
 
-        // проверяем, что review-событие сохранилось корректно
         assertThat(created.getEventId()).isNotNull();
         assertThat(feed).hasSize(1);
         assertThat(feed.getFirst().getEventType()).isEqualTo(EventType.REVIEW);
@@ -148,24 +123,19 @@ public class EventDbStorageTest {
 
     @Test
     public void testGetUserFeedReturnsOnlyCurrentUserEvents() {
-        // создаем двух пользователей
         Long firstUserId = createTestUser("first@test.com", "first");
         Long secondUserId = createTestUser("second@test.com", "second");
 
-        // добавляем события двум разным пользователям
         eventStorage.create(createEvent(firstUserId, EventType.LIKE, EventOperation.ADD, 1L));
         eventStorage.create(createEvent(secondUserId, EventType.FRIEND, EventOperation.ADD, 2L));
 
-        // получаем ленту первого пользователя
         List<Event> firstUserFeed = eventStorage.getUserFeed(firstUserId);
 
-        // проверяем, что в ленте только его события
         assertThat(firstUserFeed).hasSize(1);
         assertThat(firstUserFeed.getFirst().getUserId()).isEqualTo(firstUserId);
         assertThat(firstUserFeed.getFirst().getEventType()).isEqualTo(EventType.LIKE);
     }
 
-    // создаем тестовое событие
     private Event createEvent(Long userId, EventType type, EventOperation operation, Long entityId) {
         return Event.builder()
                 .timestamp(System.currentTimeMillis())
@@ -176,7 +146,6 @@ public class EventDbStorageTest {
                 .build();
     }
 
-    // создаем тестового пользователя напрямую в базе
     private Long createTestUser(String email, String login) {
         jdbcTemplate.update(
                 "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)",

@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.service.mpa.MpaService;
@@ -20,12 +21,13 @@ public class MpaController {
     private final MpaService mpaService;
 
     @GetMapping
-    public Collection<Mpa> listAllRatings() {
-        return mpaService.getAllRatings();
+    public ResponseEntity<Collection<Mpa>> listAllRatings() {
+        return ResponseEntity.ok(mpaService.getAllRatings());
     }
 
     @GetMapping("/{id}")
-    public Mpa fetchRatingById(@PathVariable @Positive(message = "ID рейтинга должен быть больше нуля") Long id) {
-        return mpaService.getRatingById(id);
+    public ResponseEntity<Mpa> fetchRatingById(
+            @PathVariable @Positive(message = "ID рейтинга должен быть больше нуля") Long id) {
+        return ResponseEntity.ok(mpaService.getRatingById(id));
     }
 }
