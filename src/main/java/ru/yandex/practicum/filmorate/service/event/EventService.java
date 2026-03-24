@@ -1,5 +1,7 @@
 package ru.yandex.practicum.filmorate.service.event;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -11,28 +13,29 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.List;
 
-// Сервис для работы с лентой событий
+@Slf4j
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class EventService {
 
     private final EventStorage eventStorage;
     private final UserStorage userStorage;
 
-    public EventService(EventStorage eventStorage, UserStorage userStorage) {
-        this.eventStorage = eventStorage;
-        this.userStorage = userStorage;
-    }
-
-    // Получаем ленту событий пользователя
     public List<Event> getUserFeed(Long userId) {
+        log.debug("Запрос ленты событий для пользователя id={}", userId);
         validateUserExists(userId);
-        return eventStorage.getUserFeed(userId);
+
+        List<Event> feed = eventStorage.getUserFeed(userId);
+        log.debug("В ленте пользователя {} найдено {} событий", userId, feed.size());
+        return feed;
     }
 
-    // Сохраняем новое событие
     @Transactional
     public Event addEvent(Long userId, EventType eventType, EventOperation operation, Long entityId) {
+        log.debug("Создание события: userId={}, type={}, operation={}, entityId={}",
+                userId, eventType, operation, entityId);
+
         validateUserExists(userId);
 
         Event event = Event.builder()
@@ -43,13 +46,19 @@ public class EventService {
                 .entityId(entityId)
                 .build();
 
-        return eventStorage.create(event);
+        Event created = eventStorage.create(event);
+        log.info("Событие создано: userId={}, type={}, operation={}, entityId={}",
+                userId, eventType, operation, entityId);
+        return created;
     }
 
-    // Проверяем, что пользователь существует
     private void validateUserExists(Long userId) {
+        log.debug("Проверка существования пользователя с id={}", userId);
         userStorage.findById(userId)
-                .orElseThrow(() -> new NotFoundException(
-                        String.format("Пользователь с идентификатором %d не найден", userId)));
+                .orElseThrow(() -> {
+                    log.warn("Пользователь с id={} не найден при работе с событиями", userId);
+                    return new NotFoundException(
+                            String.format("Пользователь с идентификатором %d не найден", userId));
+                });
     }
 }

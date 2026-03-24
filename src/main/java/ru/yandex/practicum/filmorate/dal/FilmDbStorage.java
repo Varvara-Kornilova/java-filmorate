@@ -97,7 +97,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
             ORDER BY likes_count DESC, f.film_id
             """;
 
-    // НОВЫЙ SQL ЗАПРОС ДЛЯ ОБЩИХ ФИЛЬМОВ
     private static final String GET_COMMON_FILMS = """
             SELECT f.film_id, f.name, f.description, f.release_date, f.duration,
                    f.mpa_rating_id, mr.name AS mpa_name, mr.description AS mpa_description,
@@ -221,20 +220,17 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
         List<Object> params = new ArrayList<>();
 
-        // Добавляем связь с жанрами только при фильтрации по жанру
         if (genreId != null) {
             sql.append("JOIN film_genres fg ON f.film_id = fg.film_id ");
         }
 
         sql.append("WHERE 1 = 1 ");
 
-        // Фильтруем по жанру
         if (genreId != null) {
             sql.append("AND fg.genre_id = ? ");
             params.add(genreId);
         }
 
-        // Фильтруем по году
         if (year != null) {
             sql.append("AND EXTRACT(YEAR FROM f.release_date) = ? ");
             params.add(year);
@@ -312,7 +308,6 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
         return films;
     }
 
-    // НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ ОБЩИХ ФИЛЬМОВ
     @Override
     public Collection<Film> getCommonFilms(Long userId, Long friendId) {
         List<Film> films = jdbcTemplate.query(GET_COMMON_FILMS, rowMapper, userId, friendId);

@@ -17,7 +17,6 @@ public interface FilmStorage {
 
     Film delete(Long id);
 
-    // Получить популярные фильмы с фильтрацией по жанру и году
     Collection<Film> getPopular(int count, Long genreId, Integer year);
 
     Long addLike(Long filmId, Long userId);
@@ -30,6 +29,5 @@ public interface FilmStorage {
 
     Collection<Film> search(String query, String by);
 
-    // Метод для общих фильмов
     Collection<Film> getCommonFilms(Long userId, Long friendId);
 }

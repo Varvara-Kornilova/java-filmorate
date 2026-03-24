@@ -10,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 
-// Маппер для чтения события из базы
 @Component
 public class EventRowMapper implements RowMapper<Event> {
 

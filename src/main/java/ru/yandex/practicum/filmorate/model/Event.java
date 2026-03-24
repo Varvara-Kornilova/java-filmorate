@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// Модель события в ленте
 @Data
 @Builder
 @NoArgsConstructor

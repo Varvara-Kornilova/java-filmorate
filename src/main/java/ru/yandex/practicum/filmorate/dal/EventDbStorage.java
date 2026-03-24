@@ -8,7 +8,6 @@ import ru.yandex.practicum.filmorate.storage.event.EventStorage;
 
 import java.util.List;
 
-// Хранилище событий в базе данных
 @Repository
 public class EventDbStorage extends BaseDbStorage<Event> implements EventStorage {
 

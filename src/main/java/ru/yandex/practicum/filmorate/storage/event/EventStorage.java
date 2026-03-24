@@ -4,7 +4,6 @@ import ru.yandex.practicum.filmorate.model.Event;
 
 import java.util.List;
 
-// Интерфейс для работы с событиями
 public interface EventStorage {
 
     Event create(Event event); // Сохраняем новое событие
