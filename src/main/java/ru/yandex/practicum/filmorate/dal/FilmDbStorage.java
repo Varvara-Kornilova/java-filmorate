@@ -129,7 +129,7 @@ public class FilmDbStorage extends BaseDbStorage<Film> implements FilmStorage {
 
     private static final String DELETE = "DELETE FROM films WHERE film_id = ?";
     private static final String EXISTS = "SELECT EXISTS(SELECT 1 FROM films WHERE film_id = ?)";
-    private static final String ADD_LIKE = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
+    private static final String ADD_LIKE = "MERGE INTO likes (film_id, user_id) KEY(film_id, user_id) VALUES (?, ?)"; //MAA 24.03.2026
     private static final String REMOVE_LIKE = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
 
     private final GenreStorage genreStorage;

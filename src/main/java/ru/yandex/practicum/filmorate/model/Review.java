@@ -26,5 +26,6 @@ public class Review {
     @NotNull(message = "ID фильма обязателен")
     private Long filmId;
 
+    @Builder.Default
     private int useful = 0;
 }
