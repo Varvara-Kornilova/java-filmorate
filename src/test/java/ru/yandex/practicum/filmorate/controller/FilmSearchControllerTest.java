@@ -77,7 +77,7 @@ public class FilmSearchControllerTest {
         // очищаем тестовые данные
         clearTestData();
 
-        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
+        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper, filmRowMapper, genreStorage, directorStorage);
         mpaStorage = new MpaDbStorage(jdbcTemplate, mpaRowMapper);
         genreStorage = new GenreDbStorage(jdbcTemplate, genreRowMapper);
         directorStorage = new DirectorDbStorage(jdbcTemplate, directorRowMapper);

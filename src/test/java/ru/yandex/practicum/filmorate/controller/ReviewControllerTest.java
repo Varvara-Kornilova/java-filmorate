@@ -60,7 +60,7 @@ public class ReviewControllerTest {
         // очищаем тестовые данные
         clearTestData();
 
-        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper);
+        userStorage = new UserDbStorage(jdbcTemplate, userRowMapper, filmRowMapper, genreStorage, directorStorage);
         filmStorage = new FilmDbStorage(jdbcTemplate, filmRowMapper, genreStorage, directorStorage);
         ReviewDbStorage reviewStorage = new ReviewDbStorage(jdbcTemplate, reviewRowMapper);
         EventDbStorage eventStorage = new EventDbStorage(jdbcTemplate, eventRowMapper);

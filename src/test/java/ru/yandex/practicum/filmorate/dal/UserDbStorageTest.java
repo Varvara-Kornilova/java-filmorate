@@ -2,21 +2,51 @@ package ru.yandex.practicum.filmorate.dal;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.jdbc.Sql;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.model.User;
 
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UserDbStorageTest extends BaseJdbcTest {
+@SpringBootTest
+@AutoConfigureTestDatabase
+@Sql(scripts = {"/schema.sql", "/data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+public class UserDbStorageTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private UserDbStorage userStorage;
 
     @BeforeEach
     public void cleanUp() {
-        super.cleanUp();
+        jdbcTemplate.update("DELETE FROM review_likes");
+        jdbcTemplate.update("DELETE FROM reviews");
+        jdbcTemplate.update("DELETE FROM film_genres");
+        jdbcTemplate.update("DELETE FROM likes");
         jdbcTemplate.update("DELETE FROM friendship");
+        jdbcTemplate.update("DELETE FROM events");
+        jdbcTemplate.update("DELETE FROM film_directors");
+        jdbcTemplate.update("DELETE FROM films");
         jdbcTemplate.update("DELETE FROM users");
+        jdbcTemplate.update("DELETE FROM directors");
+
+        jdbcTemplate.update("ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1");
+        jdbcTemplate.update("ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1");
     }
 
     @Test
@@ -76,6 +106,135 @@ public class UserDbStorageTest extends BaseJdbcTest {
         assertThat(userStorage.contains(999L)).isFalse();
     }
 
+    @Test
+    public void testGetRecommendations_ShouldReturnRecommendedFilms() {
+        User targetUser = createUser("target@test.com", "target", "Target User");
+        User similarUser = createUser("similar@test.com", "similar", "Similar User");
+        User otherUser = createUser("other@test.com", "other", "Other User");
+
+        Film film1 = createFilm("Common Film 1");
+        Film film2 = createFilm("Common Film 2");
+        Film film3 = createFilm("Recommended Film 1");
+        Film film4 = createFilm("Recommended Film 2");
+        Film film5 = createFilm("Not Recommended Film");
+
+        addLike(film1.getId(), targetUser.getId());
+        addLike(film2.getId(), targetUser.getId());
+
+        addLike(film1.getId(), similarUser.getId());
+        addLike(film2.getId(), similarUser.getId());
+        addLike(film3.getId(), similarUser.getId());
+        addLike(film4.getId(), similarUser.getId());
+
+        addLike(film1.getId(), otherUser.getId());
+        addLike(film5.getId(), otherUser.getId());
+
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
+
+        assertThat(recommendations).hasSize(2);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Recommended Film 1", "Recommended Film 2");
+    }
+
+    @Test
+    public void testGetRecommendations_ShouldReturnEmpty_WhenNoSimilarUser() {
+        User targetUser = createUser("alone@test.com", "alone", "Alone User");
+        User anotherUser = createUser("another@test.com", "another", "Another User");
+
+        Film film1 = createFilm("Film A");
+        Film film2 = createFilm("Film B");
+
+        addLike(film1.getId(), targetUser.getId());
+        addLike(film2.getId(), anotherUser.getId());
+
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void testGetRecommendations_ShouldSortByLikesCount() {
+        User targetUser = createUser("target2@test.com", "target2", "Target 2");
+        User similarUser = createUser("similar2@test.com", "similar2", "Similar 2");
+
+        User extra1 = createUser("extra1@test.com", "extra1", "Extra 1");
+        User extra2 = createUser("extra2@test.com", "extra2", "Extra 2");
+        User extra3 = createUser("extra3@test.com", "extra3", "Extra 3");
+
+        Film commonFilm = createFilm("Common Film");
+        Film popularRecommended = createFilm("Popular Recommended");
+        Film lessPopularRecommended = createFilm("Less Popular Recommended");
+
+        addLike(commonFilm.getId(), targetUser.getId());
+
+        addLike(commonFilm.getId(), similarUser.getId());
+        addLike(popularRecommended.getId(), similarUser.getId());
+        addLike(lessPopularRecommended.getId(), similarUser.getId());
+
+        addLike(popularRecommended.getId(), extra1.getId());
+        addLike(popularRecommended.getId(), extra2.getId());
+        addLike(popularRecommended.getId(), extra3.getId());
+
+        addLike(lessPopularRecommended.getId(), extra1.getId());
+
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
+
+        List<Film> filmList = new ArrayList<>(recommendations);
+        assertThat(filmList).hasSize(2);
+        assertThat(filmList.get(0).getName()).isEqualTo("Popular Recommended");
+        assertThat(filmList.get(1).getName()).isEqualTo("Less Popular Recommended");
+    }
+
+    @Test
+    public void testGetRecommendations_ShouldReturnEmpty_WhenUserHasNoLikes() {
+        User targetUser = createUser("noLikes@test.com", "nolikes", "No Likes");
+        User similarUser = createUser("similar3@test.com", "similar3", "Similar 3");
+
+        Film film1 = createFilm("Film 1");
+        Film film2 = createFilm("Film 2");
+
+        addLike(film1.getId(), similarUser.getId());
+        addLike(film2.getId(), similarUser.getId());
+
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
+
+        assertThat(recommendations).isEmpty();
+    }
+
+    @Test
+    public void testGetRecommendations_ShouldSelectUserWithMaxOverlap() {
+        User targetUser = createUser("target3@test.com", "target3", "Target 3");
+        User userWith2Overlap = createUser("overlap2@test.com", "overlap2", "Overlap 2");
+        User userWith1Overlap = createUser("overlap1@test.com", "overlap1", "Overlap 1");
+
+        Film film1 = createFilm("Film 1");
+        Film film2 = createFilm("Film 2");
+        Film film3 = createFilm("Film 3");
+        Film film4 = createFilm("Film 4");
+        Film film5 = createFilm("Film 5");
+        Film film6 = createFilm("Film 6");
+        Film film7 = createFilm("Film 7");
+
+        addLike(film1.getId(), targetUser.getId());
+        addLike(film2.getId(), targetUser.getId());
+        addLike(film3.getId(), targetUser.getId());
+
+        addLike(film1.getId(), userWith2Overlap.getId());
+        addLike(film2.getId(), userWith2Overlap.getId());
+        addLike(film4.getId(), userWith2Overlap.getId());
+        addLike(film5.getId(), userWith2Overlap.getId());
+
+        addLike(film1.getId(), userWith1Overlap.getId());
+        addLike(film6.getId(), userWith1Overlap.getId());
+        addLike(film7.getId(), userWith1Overlap.getId());
+
+        Collection<Film> recommendations = userStorage.getRecommendations(targetUser.getId());
+
+        assertThat(recommendations).hasSize(2);
+        assertThat(recommendations).extracting(Film::getName)
+                .containsExactlyInAnyOrder("Film 4", "Film 5");
+    }
+
     private User createUser(String email, String login, String name) {
         User user = new User();
         user.setEmail(email);
@@ -83,5 +242,41 @@ public class UserDbStorageTest extends BaseJdbcTest {
         user.setName(name);
         user.setBirthday(LocalDate.of(1990, 1, 1));
         return userStorage.create(user);
+    }
+
+    private Film createFilm(String name) {
+        Film film = new Film();
+        film.setName(name);
+        film.setDescription("Description for " + name);
+        film.setReleaseDate(LocalDate.of(2024, 1, 1));
+        film.setDuration(120);
+
+        Mpa mpa = new Mpa();
+        mpa.setId(1L);
+        mpa.setName("G");
+        film.setMpa(mpa);
+
+        String sql = "INSERT INTO films (name, description, release_date, duration, mpa_rating_id) VALUES (?, ?, ?, ?, ?)";
+
+        var keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, film.getName());
+            ps.setString(2, film.getDescription());
+            ps.setDate(3, java.sql.Date.valueOf(film.getReleaseDate()));
+            ps.setInt(4, film.getDuration());
+            ps.setLong(5, film.getMpa().getId());
+            return ps;
+        }, keyHolder);
+
+        film.setId(keyHolder.getKey().longValue());
+
+        return film;
+    }
+
+    private void addLike(Long filmId, Long userId) {
+        String sql = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
+        jdbcTemplate.update(sql, filmId, userId);
     }
 }

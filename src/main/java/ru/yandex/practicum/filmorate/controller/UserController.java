@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Event;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.event.EventService;
 import ru.yandex.practicum.filmorate.service.user.UserService;
@@ -57,6 +58,13 @@ public class UserController {
             @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
         log.info("Запрошена лента событий пользователя с id={}", id);
         return eventService.getUserFeed(id);
+    }
+
+    @GetMapping("/{id}/recommendations")
+    public Collection<Film> getRecommendations(
+            @PathVariable @Positive(message = "ID пользователя должен быть положительным") Long id) {
+        log.info("Запрошены рекомендации для пользователя {}", id);
+        return userService.getRecommendations(id);
     }
 
     @PostMapping
