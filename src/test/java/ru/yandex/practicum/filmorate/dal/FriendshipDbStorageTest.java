@@ -1,16 +1,7 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
-import ru.yandex.practicum.filmorate.dal.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
@@ -20,16 +11,7 @@ import java.util.Collection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-@JdbcTest
-@AutoConfigureTestDatabase
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
-@Import({FriendshipDbStorage.class, UserDbStorage.class, UserRowMapper.class})
-@Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-public class FriendshipDbStorageTest {
-
-    private final FriendshipDbStorage friendshipStorage;
-    private final UserDbStorage userStorage;
-    private final JdbcTemplate jdbcTemplate;
+public class FriendshipDbStorageTest extends BaseJdbcTest {
 
     private User user1;
     private User user2;
@@ -37,6 +19,7 @@ public class FriendshipDbStorageTest {
 
     @BeforeEach
     public void setUp() {
+        super.cleanUp();
         jdbcTemplate.update("DELETE FROM friendship");
         jdbcTemplate.update("DELETE FROM users");
 
@@ -48,7 +31,6 @@ public class FriendshipDbStorageTest {
     @Test
     public void testAddFriend() {
         friendshipStorage.addFriend(user1.getId(), user2.getId());
-
         Collection<User> friends = friendshipStorage.getFriends(user1.getId());
         assertThat(friends).extracting("id").contains(user2.getId());
     }
@@ -56,7 +38,7 @@ public class FriendshipDbStorageTest {
     @Test
     public void testAddFriendAlreadyExists() {
         friendshipStorage.addFriend(user1.getId(), user2.getId());
-        friendshipStorage.addFriend(user1.getId(), user2.getId()); // повторный вызов
+        friendshipStorage.addFriend(user1.getId(), user2.getId());
 
         Collection<User> friends = friendshipStorage.getFriends(user1.getId());
         assertThat(friends).extracting("id").containsExactly(user2.getId());
@@ -83,14 +65,12 @@ public class FriendshipDbStorageTest {
         friendshipStorage.addFriend(user2.getId(), user3.getId());
 
         Collection<User> common = friendshipStorage.getCommonFriends(user1.getId(), user2.getId());
-
         assertThat(common).extracting("id").contains(user3.getId());
     }
 
     @Test
     public void testGetCommonFriendsEmpty() {
         friendshipStorage.addFriend(user1.getId(), user3.getId());
-
         Collection<User> common = friendshipStorage.getCommonFriends(user1.getId(), user2.getId());
         assertThat(common).isEmpty();
     }
@@ -103,9 +83,7 @@ public class FriendshipDbStorageTest {
 
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM friendship WHERE user_id = ? AND friend_id = ?",
-                Integer.class,
-                user1.getId(), user1.getId()
-        );
+                Integer.class, user1.getId(), user1.getId());
         assertThat(count).isEqualTo(0);
     }
 

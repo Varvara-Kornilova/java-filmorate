@@ -1,7 +1,9 @@
 package ru.yandex.practicum.filmorate.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.yandex.practicum.filmorate.validator.ValidReleaseDate;
@@ -10,6 +12,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Film {
@@ -22,17 +25,22 @@ public class Film {
     private String description;
 
     @ValidReleaseDate
-    @PastOrPresent(message = "Дата релиза не может быть в будущем")
     private LocalDate releaseDate;
 
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
     private Integer duration;
 
+    @Builder.Default
     private Set<Long> likes = new HashSet<>();
 
+    @Builder.Default
     private Set<Genre> genres = new HashSet<>();
 
+    @JsonIgnore
     private Long mpaRatingId;
 
     private Mpa mpa;
+
+    @Builder.Default
+    private Set<Director> directors = new HashSet<>();
 }

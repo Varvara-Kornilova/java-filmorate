@@ -11,4 +11,3 @@ public class FriendshipStatus {
     private Long id;
     private String status;
 }
-

@@ -1,17 +1,7 @@
 package ru.yandex.practicum.filmorate.dal;
 
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
-import ru.yandex.practicum.filmorate.dal.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
@@ -23,24 +13,11 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@JdbcTest
-@AutoConfigureTestDatabase
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
-@Import({
-        GenreDbStorage.class,
-        FilmDbStorage.class,
-        GenreRowMapper.class,
-        FilmRowMapper.class
-})
-@Sql(scripts = "/data.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
-public class GenreDbStorageTest {
-
-    private final GenreDbStorage genreStorage;
-    private final FilmDbStorage filmStorage;
-    private final JdbcTemplate jdbcTemplate;
+public class GenreDbStorageTest extends BaseJdbcTest {
 
     @BeforeEach
     public void cleanUp() {
+        super.cleanUp();
         jdbcTemplate.update("DELETE FROM film_genres");
         jdbcTemplate.update("DELETE FROM films");
     }
@@ -58,7 +35,6 @@ public class GenreDbStorageTest {
     @Test
     public void testFindById() {
         Optional<Genre> found = genreStorage.findById(1L);
-
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Комедия");
     }
@@ -93,7 +69,6 @@ public class GenreDbStorageTest {
     public void testSetGenresEmpty() {
         Film film = createTestFilm();
         Film created = filmStorage.create(film);
-
         genreStorage.setGenres(created.getId(), Set.of());
 
         Set<Genre> found = genreStorage.getGenresByFilmId(created.getId());

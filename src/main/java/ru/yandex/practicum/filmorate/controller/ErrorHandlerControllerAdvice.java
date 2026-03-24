@@ -37,7 +37,7 @@ public class ErrorHandlerControllerAdvice {
 
     @ResponseBody
     @ExceptionHandler(ConstraintViolationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     public ValidationErrorResponse onConstraintValidationException(
             ConstraintViolationException e
     ) {
